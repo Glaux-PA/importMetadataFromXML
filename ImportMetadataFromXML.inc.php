@@ -39,11 +39,16 @@ class ImportMetadataFromXML extends GenericPlugin
 	 */
 	public function register($category, $path, $mainContextId = null)
 	{
+		error_log("Intentando registrar el plugin ImportMetadataFromXML");
 		if (!parent::register($category, $path, $mainContextId)) return false;
 
 		if ($this->getEnabled($mainContextId)) {
+			HookRegistry::register('Form::config::after', function() {
+				error_log("Hook Form::config::after disparado.");
+			});
 			HookRegistry::register('Form::config::after', [$this, 'loadButton']);
 			HookRegistry::register('LoadHandler', array($this, 'setPageHandler'));
+			error_log("Plugin registrado y hooks configurados.");
 		}
 		return true;
 	}
@@ -56,6 +61,9 @@ class ImportMetadataFromXML extends GenericPlugin
 
 
 		$templateMgr = TemplateManager::getManager($request);
+
+		error_log("Intentando añadir el botón de importación");
+		console.log("Intentando añadir el botón de importación");
 
 		$fileImport =  $request->getBaseUrl() . DIRECTORY_SEPARATOR . 'index.php' . DIRECTORY_SEPARATOR . $request->getRequestedJournalPath() . DIRECTORY_SEPARATOR . 'importMetadataFromXML';
 		$scriptCode = '
