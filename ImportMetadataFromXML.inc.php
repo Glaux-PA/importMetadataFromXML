@@ -16,6 +16,8 @@
 
 import('lib.pkp.classes.plugins.GenericPlugin');
 
+use APP\facades\Repo;
+
 class ImportMetadataFromXML extends GenericPlugin
 {
 	/**
@@ -39,16 +41,12 @@ class ImportMetadataFromXML extends GenericPlugin
 	 */
 	public function register($category, $path, $mainContextId = null)
 	{
-		error_log("Intentando registrar el plugin ImportMetadataFromXML");
+
 		if (!parent::register($category, $path, $mainContextId)) return false;
 
 		if ($this->getEnabled($mainContextId)) {
-			HookRegistry::register('Form::config::after', function() {
-				error_log("Hook Form::config::after disparado.");
-			});
 			HookRegistry::register('Form::config::after', [$this, 'loadButton']);
 			HookRegistry::register('LoadHandler', array($this, 'setPageHandler'));
-			error_log("Plugin registrado y hooks configurados.");
 		}
 		return true;
 	}
@@ -58,14 +56,17 @@ class ImportMetadataFromXML extends GenericPlugin
 	public function loadButton($hookName, $args)
 	{
 		$request = Application::get()->getRequest();
-
-
 		$templateMgr = TemplateManager::getManager($request);
-
-		error_log("Intentando añadir el botón de importación");
-		console.log("Intentando añadir el botón de importación");
-
-		$fileImport =  $request->getBaseUrl() . DIRECTORY_SEPARATOR . 'index.php' . DIRECTORY_SEPARATOR . $request->getRequestedJournalPath() . DIRECTORY_SEPARATOR . 'importMetadataFromXML';
+		//$fileImport =  $request->getBaseUrl() . DIRECTORY_SEPARATOR . 'index.php' . DIRECTORY_SEPARATOR . $request->getRequestedJournalPath() . DIRECTORY_SEPARATOR . 'importMetadataFromXML';
+		$context = $request->getContext();
+		if ($context) {
+			$contextPath = $context->getPath();
+			$fileImport = $request->getBaseUrl() . DIRECTORY_SEPARATOR . 'index.php' . DIRECTORY_SEPARATOR . $contextPath . '/importMetadataFromXML';
+		} else {
+			$fileImport = $request->getBaseUrl() . '/index.php/importMetadataFromXML';
+		}
+		error_log("URL generada para \$fileImport: " . $fileImport);
+		/*
 		$scriptCode = '
 		document.addEventListener("DOMContentLoaded", () => {
 			const menu = document.querySelector(".pkpPublication__tabs .pkpTabs__buttons");
@@ -87,10 +88,46 @@ class ImportMetadataFromXML extends GenericPlugin
 					}
 
 				});
+				
 				menu.append(buttonImport);
 			}
 		});
 		';
+		*/
+		$scriptCode = '
+			document.addEventListener("DOMContentLoaded", () => {
+				const menu = document.querySelector(".pkpPublication__tabs .pkpTabs__buttons");
+
+				if (menu) {
+					const buttonImport = document.createElement("button");
+					buttonImport.innerText = "' . __('plugins.generic.importMetadata.name') . '";
+					buttonImport.setAttribute("aria-controls", "Import");
+					buttonImport.id = "importMetadata-button";
+					buttonImport.className = "pkpTabs__button";
+
+					buttonImport.addEventListener("click", () => {
+						const submissionId = document.querySelector(".pkpWorkflow__identificationId").innerText;
+						const fetchUrl = "' . $fileImport . '?submissionId=" + submissionId;
+						
+						if (confirm("' . __('plugins.generic.importMetadata.confirmImport') . '")) {
+							fetch(fetchUrl)
+								.then(response => response.json())
+								.then(data => {
+									if (!alert(data)) {
+										window.location.reload();
+									}
+								})
+								.catch(error => {
+									console.error("Error in request:", error);
+								});
+						}
+					});
+
+					menu.append(buttonImport);
+				}
+			});
+			';
+
 
 
 
@@ -109,6 +146,7 @@ class ImportMetadataFromXML extends GenericPlugin
 	{
 		$page = $params[0];
 		if ($page == 'importMetadataFromXML') {
+			/*
 			$submissionDao = DAORegistry::getDAO('SubmissionDAO');
 			$publicationDao = DAORegistry::getDAO('PublicationDAO');
 			$submission = $submissionDao->getById($_GET['submissionId']);
@@ -116,6 +154,23 @@ class ImportMetadataFromXML extends GenericPlugin
 
 			$submissionGalleyDao = DAORegistry::getDAO('SubmissionFileDAO');
 			$submissionGalleys = $submission->getGalleys();
+			*/
+
+			$submissionId = $_GET['submissionId'];
+        
+			$submission = Repo::submission()->get($submissionId);	
+			if (!$submission) {
+				throw new Exception("Submission not found, ID: $submissionId");
+			}
+			$publication = $submission->getCurrentPublication();
+			if (!$publication) {
+				throw new Exception("Publication for submission not found, submissionID: $submissionId");
+			}
+			$submissionGalleys = $submission->getGalleys();
+
+
+
+
 
 			$xmlSubmissionFile = null;
 			foreach ($submissionGalleys as $submissionGalley) {
@@ -184,11 +239,22 @@ class ImportMetadataFromXML extends GenericPlugin
 				$publication->setData('abstract', $element->nodeValue, $secondaryaLanguage);
 			}
 
+			/*
 			$authorDao = DAORegistry::getDAO('AuthorDAO');
 			$authors = $submission->getAuthors();
 			foreach ($authors as $author) {
 				$authorDao->deleteObject($author);
 			}
+				*/
+			$authors = $publication->getData('authors');
+
+			foreach ($authors as $author) {
+				Repo::author()->delete($author);
+			}
+
+
+
+
 
 			$contribGroup = @$articleMeta->getElementsByTagName('contrib-group')->item(0);
 
