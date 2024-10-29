@@ -150,15 +150,12 @@ class ImportMetadataFromXML extends GenericPlugin
 			$primaryLanguage = 'es';
 			$secondaryaLanguage = 'en';
 
-			//TODO review language
 			$pattern = '/xml:lang="([^"]+)"/';
 			if (preg_match($pattern, $contents, $matches)) {
-				if ($matches[1] === 'en') {
-					$primaryLanguage = 'en';
-					$secondaryaLanguage = 'es';
-				}
+				$primaryLanguage = $matches[1];
+				$secondaryLanguage = ($primaryLanguage === 'en') ? 'es' : 'en';
 			}
-
+			
 			$this->primaryLocale = $primaryLanguage;
 
 			$warnings = [];
