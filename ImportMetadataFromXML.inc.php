@@ -247,7 +247,7 @@ class ImportMetadataFromXML extends GenericPlugin
 
 				$correspRef = '';
 				$affRef = '';
-				//TODO review email
+
 				foreach ($contrib->getElementsByTagName('xref') as $ref) {
 					$refType = $ref->getAttribute('ref-type');
 					if ($refType === 'corresp') {
@@ -277,9 +277,16 @@ class ImportMetadataFromXML extends GenericPlugin
 						}
 					}
 				}
-				//TODO default email
+
+				try {
+				$contactEmail = $request->getContext()->getData('contactEmail');
+
+				} catch (Exception $e) {
+					error_log('Error retrieving default contact email: ' . $e->getMessage());
+					$contactEmail = 'default@example.com';
+				}
 				if (empty($email)) {
-					$email = 'emailfalso@glaux.es';
+					$email = $contactEmail;
 				}
 
 				if (empty($orcid)) {
@@ -299,7 +306,6 @@ class ImportMetadataFromXML extends GenericPlugin
 					}
 				}
 
-				//TODO review email
 				$newAuthor->setEmail($email);
 				$newAuthor->setCountry($country);
 				$newAuthor->setAffiliation([$this->primaryLocale => $affiliation], null);
@@ -408,9 +414,9 @@ class ImportMetadataFromXML extends GenericPlugin
 		}
 	}
 
+	//TODO review Deprecated function
 	private function transformLocale($locale)
 	{
-		//TODO review language
 		$transformLocale = [
 			'es' => 'es_ES',
 			'en' => 'en_US'
