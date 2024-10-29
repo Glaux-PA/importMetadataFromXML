@@ -9,16 +9,16 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2023-08-19T10:24:49-05:00\n"
 "PO-Revision-Date: 2023-08-19T10:24:49-05:00\n"
-"Language: es \n"
+"Language: pt \n"
 
 msgid "plugins.generic.importMetadata.name"
 msgstr "Importar metadatos"
 
 msgid "plugins.generic.importMetadata.notGalley"
-msgstr "No existe ninguna galerada XML. La importación no se ha podido realizar."
+msgstr "Não há galera XML. Não foi possível concluir a importação."
 
 msgid "plugins.generic.importMetadata.confirmImport"
-msgstr "¿Desea importar los metadatados de la galerada XML y sobreescribir los actuales?"
+msgstr "Deseja importar as metadatas da galera XML e substituir as atuais?"
 
 msgid "plugins.generic.importMetadata.importSuccessful"
-msgstr "La importación se ha realizado correctamente"
+msgstr "A importação foi bem sucedida"

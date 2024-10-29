@@ -58,7 +58,6 @@ class ImportMetadataFromXML extends GenericPlugin
 	{
 		$request = Application::get()->getRequest();
 		$templateMgr = TemplateManager::getManager($request);
-		//$fileImport =  $request->getBaseUrl() . DIRECTORY_SEPARATOR . 'index.php' . DIRECTORY_SEPARATOR . $request->getRequestedJournalPath() . DIRECTORY_SEPARATOR . 'importMetadataFromXML';
 		$context = $request->getContext();
 		if ($context) {
 			$contextPath = $context->getPath();
@@ -66,35 +65,7 @@ class ImportMetadataFromXML extends GenericPlugin
 		} else {
 			$fileImport = $request->getBaseUrl() . '/index.php/importMetadataFromXML';
 		}
-		//TODO revisar para 3.4
-		/*
-		$scriptCode = '
-		document.addEventListener("DOMContentLoaded", () => {
-			const menu = document.querySelector(".pkpPublication__tabs .pkpTabs__buttons");
 
-			if (menu) {
-				const buttonImport = document.createElement("button");
-				buttonImport.innerText = "' . __('plugins.generic.importMetadata.name') . '";
-				buttonImport.setAttribute("aria-controls", "Import");
-				buttonImport.id = "importMetadata-button";
-				buttonImport.className = "pkpTabs__button";
-
-				buttonImport.addEventListener("click", () => {
-					if (confirm("' . __('plugins.generic.importMetadata.confirmImport') . '")) {
-						fetch("' . $fileImport . '?submissionId="+document.querySelector(".pkpWorkflow__identificationId").innerText)
-							.then(response => response.json())
-							.then(data => {
-								if(!alert(data)){window.location.reload();}
-							});
-					}
-
-				});
-				
-				menu.append(buttonImport);
-			}
-		});
-		';
-		*/
 		$scriptCode = '
 			document.addEventListener("DOMContentLoaded", () => {
 				const menu = document.querySelector(".pkpPublication__tabs .pkpTabs__buttons");
@@ -129,9 +100,6 @@ class ImportMetadataFromXML extends GenericPlugin
 			});
 			';
 
-
-
-
 		$templateMgr->addJavaScript(
 			'importMetadataFromXML',
 			$scriptCode,
@@ -147,15 +115,6 @@ class ImportMetadataFromXML extends GenericPlugin
 	{
 		$page = $params[0];
 		if ($page == 'importMetadataFromXML') {
-			/*
-			$submissionDao = DAORegistry::getDAO('SubmissionDAO');
-			$publicationDao = DAORegistry::getDAO('PublicationDAO');
-			$submission = $submissionDao->getById($_GET['submissionId']);
-			$publication = $submission->getCurrentPublication();
-
-			$submissionGalleyDao = DAORegistry::getDAO('SubmissionFileDAO');
-			$submissionGalleys = $submission->getGalleys();
-			*/
 
 			$submissionId = $_GET['submissionId'];
         
@@ -168,10 +127,6 @@ class ImportMetadataFromXML extends GenericPlugin
 				throw new Exception("Publication for submission not found, submissionID: $submissionId");
 			}
 			$submissionGalleys = $submission->getGalleys();
-
-
-
-
 
 			$xmlSubmissionFile = null;
 			foreach ($submissionGalleys as $submissionGalley) {
@@ -189,28 +144,13 @@ class ImportMetadataFromXML extends GenericPlugin
 
 			$contents = Services::get('file')->fs->read($submissionFile->getData('path'));
 
-
 			$dom = new DOMDocument();
 			$dom->loadXML($contents);
 
-
-
-			//TODO revisar 3.4
-			/*
-			$primaryLanguage = 'es_ES';
-			$secondaryaLanguage = 'en_US';
-
-			$pattern = '/xml:lang="([^"]+)"/';
-			if (preg_match($pattern, $contents, $matches)) {
-				if ($matches[1] === 'en') {
-					$primaryLanguage = 'en_US';
-					$secondaryaLanguage = 'es_ES';
-				}
-			}
-			*/
 			$primaryLanguage = 'es';
 			$secondaryaLanguage = 'en';
 
+			//TODO review language
 			$pattern = '/xml:lang="([^"]+)"/';
 			if (preg_match($pattern, $contents, $matches)) {
 				if ($matches[1] === 'en') {
@@ -219,16 +159,12 @@ class ImportMetadataFromXML extends GenericPlugin
 				}
 			}
 
-
-
 			$this->primaryLocale = $primaryLanguage;
 
 			$warnings = [];
 
-
 			$front = $dom->getElementsByTagName('front')->item(0);
 			$articleMeta = $front->getElementsByTagName('article-meta')->item(0);
-
 
 			$dato = $articleMeta->getElementsByTagName('title-group')->item(0)->getElementsByTagName('article-title')->item(0)->nodeValue;
 			$publication->setData('title', $dato, $primaryLanguage);
@@ -254,49 +190,23 @@ class ImportMetadataFromXML extends GenericPlugin
 				$publication->setData('abstract', $element->nodeValue, $secondaryaLanguage);
 			}
 
-			//TODO revisar 3.4
-			/*
-			$authorDao = DAORegistry::getDAO('AuthorDAO');
-			$authors = $submission->getAuthors();
-			foreach ($authors as $author) {
-				$authorDao->deleteObject($author);
-			}
-				*/
 			$authors = $publication->getData('authors');
 
 			foreach ($authors as $author) {
 				Repo::author()->delete($author);
 			}
 
-
-
-
-
 			$contribGroup = @$articleMeta->getElementsByTagName('contrib-group')->item(0);
 
 			$primaryContactAuthor = false;
 			$cont = 0;
 			$request = Application::get()->getRequest();
-			//TODO revisar 3.4
-			/*
-			$userGroupDao = DAORegistry::getDAO('UserGroupDAO'); 
-			$authorUserGroups = $userGroupDao->getByRoleId($request->getContext()->getId(), ROLE_ID_AUTHOR)->toArray();
-
-			$userGroupId = null;
-			foreach ($authorUserGroups as $authorUserGroup) {
-				if ($authorUserGroup->getAbbrev('en_US') === 'AU') {
-					$userGroupId = $authorUserGroup->getId();
-					continue;
-				}
-			}
-			*/
 			$contextId = $request->getContext()->getId();
 			$authorUserGroups = Repo::userGroup()
 				->getCollector()
 				->filterByContextIds([$contextId])
 				->filterByRoleIds([ROLE_ID_AUTHOR])
 				->getMany();
-			
 			
 			$userGroupId = null;
 			foreach ($authorUserGroups as $authorUserGroup) {
@@ -307,96 +217,40 @@ class ImportMetadataFromXML extends GenericPlugin
 				}
 			}
 
-
-
-
 			foreach ($contribGroup->getElementsByTagName('contrib') as $contrib) {
 
-				//error_log("contribGroup: " . print_r($contribGroup, true));
-				//error_log("contrib: " . print_r($contrib, true));
-				//TODO revisar 3.4
-				/*$newAuthor = $authorDao->newDataObject();
-				$newAuthor->setData('publicationId', $publication->getId());
-				$newAuthor->setData('seq', $cont);
-
-				$primaryContact = @$contrib->getAttribute('corresp');
-
-				if (!empty($primaryContact) && $primaryContact === 'yes') {
-					$newAuthor->setPrimaryContact(true);
-				}
-				*/
 				$newAuthor = new Author();
 				$newAuthor->setData('publicationId', $publication->getId());
 				$newAuthor->setData('seq', $cont);
 				
-				// Verificar si es el contacto principal y asignarlo
 				$primaryContact = @$contrib->getAttribute('corresp');
 				if (!empty($primaryContact) && $primaryContact === 'yes') {
 					$newAuthor->setPrimaryContact(true);
 				}
 				
-				//TODO revisar para la 3.4
-				/*
-				// Asignar nombres y otros datos
-				$newAuthor->setData('givenName', ['en' => $givenName]);
-				$newAuthor->setData('familyName', ['en' => $familyName]);
-				*/	
-
-				//TODO Revision de duplicado
-				/*
-				// Asignar el nombre de pila (dado) en el idioma especificado
-				//$newAuthor->setGivenName([$this->primaryLocale => $givenName], null);
-				$newAuthor->setGivenName([$this->primaryLocale => 'en_EN'], null);
-
-
-				// Asignar el apellido (familia) en el idioma especificado
-				//$newAuthor->setFamilyName([$this->primaryLocale => $familyName], null);
-				$newAuthor->setFamilyName([$this->primaryLocale => 'en_EN'], null);
-
-				
-				//TODO revisar funcionamiento de EMAIL y asignación por defecto
-				$email = !empty($contrib->getElementsByTagName('email')->item(0)) ? 
-				$contrib->getElementsByTagName('email')->item(0)->nodeValue : 
-				'emailfalso@example.com';
-	  			$newAuthor->setData('email', $email);
-
-				// Guardar el nuevo autor usando Repo::author()->add()
-				Repo::author()->add($newAuthor);
-
-				*/
-
-
-
-
 				$data = $contrib->getElementsByTagName('name')->item(0)->getElementsByTagName('given-names')->item(0)->nodeValue;
 				$data = mb_convert_case(mb_strtolower($data), MB_CASE_TITLE, 'UTF-8');
 
-				//TODO revisar esta asignación, posible duplicado
 				$newAuthor->setGivenName([$this->primaryLocale => $data], null);
-				//TODO revisar para la 3.4
-				//$newAuthor->setGivenName(['es_ES' => $data], null);
 				$newAuthor->setGivenName(['es' => $data], null);
 
 
 				$data = $contrib->getElementsByTagName('name')->item(0)->getElementsByTagName('surname')->item(0)->nodeValue;
 				$data = mb_convert_case(mb_strtolower($data), MB_CASE_TITLE, 'UTF-8');
 				$newAuthor->setFamilyName([$this->primaryLocale => $data], null);
-				//TODO revisar para la 3.4
-				//$newAuthor->setFamilyName(['es_ES' => $data], null);
 				$newAuthor->setFamilyName(['es' => $data], null);
 
 				$data = @$contrib->getElementsByTagName('bio')->item(0)->nodeValue;
 				$newAuthor->setBiography([$this->primaryLocale => $data], null);
-
 
 				$email = '';
 				$orcid = '';
 				$country = '';
 				$affiliation = '';
 
-
 				$correspRef = '';
 				$affRef = '';
+				//TODO review email
 				foreach ($contrib->getElementsByTagName('xref') as $ref) {
 					$refType = $ref->getAttribute('ref-type');
 					if ($refType === 'corresp') {
@@ -405,7 +259,6 @@ class ImportMetadataFromXML extends GenericPlugin
 						$affRef =  $ref->getAttribute('rid');
 					}
 				}
-
 
 				if ($contrib->getElementsByTagName('aff')->count()) {
 					$email = @$contrib->getElementsByTagName('aff')->item(0)->getElementsByTagName('email')->item(0)->nodeValue;
@@ -427,6 +280,7 @@ class ImportMetadataFromXML extends GenericPlugin
 						}
 					}
 				}
+				//TODO default email
 				if (empty($email)) {
 					$email = 'emailfalso@glaux.es';
 				}
@@ -448,38 +302,19 @@ class ImportMetadataFromXML extends GenericPlugin
 					}
 				}
 
-
-				//TODO revisar email
+				//TODO review email
 				$newAuthor->setEmail($email);
 				$newAuthor->setCountry($country);
 				$newAuthor->setAffiliation([$this->primaryLocale => $affiliation], null);
 				$newAuthor->setOrcid($orcid);
 
-
 				$newAuthor->setUserGroupId($userGroupId);
 
-				//TODO revisar 3.4
-				/*
-				$newAuthor->setUrl($this->getData('userUrl'));
-				$newAuthor->setIncludeInBrowse(($this->getData('includeInBrowse') ? true : false));
-				*/
-
-
-				//Cambiar o autor principal da publicacion
-				/*
-				$authorId = $authorDao->insertObject($newAuthor);
-				if ($newAuthor->getPrimaryContact()) {
-					$primaryContactAuthor = $authorId;
-				}
-				*/
 				$authorId = Repo::author()->add($newAuthor);
 
 				if ($newAuthor->getPrimaryContact()) {
 					$primaryContactAuthor = $authorId;
 				}
-
-
-
 				$cont++;
 			}
 
@@ -520,9 +355,6 @@ class ImportMetadataFromXML extends GenericPlugin
 			$yearPublished = @$pubDate->getElementsByTagName('year')->item(0)->nodeValue;
 			$publication->setData('datePublished', $yearPublished . '-' . $monthPublished . '-' . $dayPublished);
 
-
-
-
 			$licenses = $articleMeta->getElementsByTagName('permissions')->item(0)->getElementsByTagName('license');
 			foreach ($licenses as $li) {
 				if ($li->getAttribute('license-type') === 'open-access') {
@@ -539,18 +371,10 @@ class ImportMetadataFromXML extends GenericPlugin
 				$publication->setData('citationsRaw', implode("\n", $citations));
 			}
 
-			//TODO revisar 3.4
-			/*
-			$publicationDao->updateObject($publication);
-			*/
-			// Obtener el usuario actual
 			$currentUser = Application::get()->getRequest()->getUser();
-			$userId = $currentUser ? $currentUser->getId() : 1; // Usar 1 como respaldo si no hay usuario actual
+			$userId = $currentUser ? $currentUser->getId() : 1; // Use 1 as default
 
-			// Guardar la publicación con el usuario actual como contexto
 			Repo::publication()->edit($publication, ['userId' => $userId]);
-	
-
 
 			$keywordsGroups = @$articleMeta->getElementsByTagName('kwd-group');
 			$localeKeywords = [];
@@ -575,8 +399,6 @@ class ImportMetadataFromXML extends GenericPlugin
 			$submissionAgencyDao = DAORegistry::getDAO('SubmissionAgencyDAO');
 			$submissionAgencyDao->insertAgencies($localeFoundings, $publication->getId());
 
-
-
 			$return = __('plugins.generic.importMetadata.importSuccessful');
 			foreach ($warnings as $warning) {
 				$return .= "\n" . $warning;
@@ -591,7 +413,7 @@ class ImportMetadataFromXML extends GenericPlugin
 
 	private function transformLocale($locale)
 	{
-
+		//TODO review language
 		$transformLocale = [
 			'es' => 'es_ES',
 			'en' => 'en_US'
