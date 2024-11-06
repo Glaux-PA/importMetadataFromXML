@@ -130,17 +130,15 @@ class ImportMetadataFromXML extends GenericPlugin
 			$dom->loadXML($contents);
 
 
-
-
 			$primaryLanguage = 'es_ES';
 			$secondaryaLanguage = 'en_US';
 
 			$pattern = '/xml:lang="([^"]+)"/';
 			if (preg_match($pattern, $contents, $matches)) {
-				if ($matches[1] === 'en') {
-					$primaryLanguage = 'en_US';
-					$secondaryaLanguage = 'es_ES';
-				}
+				$iso1Code = $matches[1];
+				$iso3Code = PKPLocale::getIso3FromIso1($iso1Code);
+				$primaryLanguage = PKPLocale::getLocaleFromIso3($iso3Code);
+				$secondaryLanguage = ($primaryLanguage === 'en_US') ? 'es_ES' : 'en_US';
 			}
 
 			$this->primaryLocale = $primaryLanguage;
@@ -263,9 +261,17 @@ class ImportMetadataFromXML extends GenericPlugin
 						}
 					}
 				}
-				if (empty($email)) {
-					$email = 'emailfalso@glaux.es';
+				
+				try {
+					$contactEmail = $request->getContext()->getData('contactEmail');
+				} catch (Exception $e) {
+					error_log('Error retrieving default contact email: ' . $e->getMessage());
+					$contactEmail = 'default@example.com';
 				}
+				if (empty($email)) {
+					$email = $contactEmail;
+				}
+
 
 				if (empty($orcid)) {
 					$orcid = @$contrib->getElementsByTagName('contrib-id')->item(0)->nodeValue;
