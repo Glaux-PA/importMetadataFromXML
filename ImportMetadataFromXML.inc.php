@@ -15,9 +15,13 @@
 
 
 import('lib.pkp.classes.plugins.GenericPlugin');
+require_once __DIR__ . '/helpers/AbstractProcessor.php';
+require_once __DIR__ . '/helpers/TextFormater.php';
+require_once __DIR__ . '/helpers/LocaleHelper.php';
 
 use APP\facades\Repo;
 use APP\author\Author;
+use PKP\security\Role;
 
 class ImportMetadataFromXML extends GenericPlugin
 {
@@ -59,6 +63,8 @@ class ImportMetadataFromXML extends GenericPlugin
 		$request = Application::get()->getRequest();
 		$templateMgr = TemplateManager::getManager($request);
 		$context = $request->getContext();
+
+		$user = $request->getUser();
 		if ($context) {
 			$contextPath = $context->getPath();
 			$fileImport = $request->getBaseUrl() . DIRECTORY_SEPARATOR . 'index.php' . DIRECTORY_SEPARATOR . $contextPath . '/importMetadataFromXML';
@@ -66,7 +72,25 @@ class ImportMetadataFromXML extends GenericPlugin
 			$fileImport = $request->getBaseUrl() . '/index.php/importMetadataFromXML';
 		}
 
-		$scriptCode = '
+		if (!$user) {
+			return false;
+		}
+		$userGroups = Repo::userGroup()
+        ->getCollector()
+        ->filterByUserIds([$user->getId()])
+        ->filterByContextIds([$context->getId()])
+        ->getMany();
+
+		// Verificar si el usuario tiene el rol requerido (por ejemplo, ROLE_ID_MANAGER)
+		$hasRequiredRole = false;
+		foreach ($userGroups as $userGroup) {
+			if ($userGroup->getRoleId() === ROLE_ID_MANAGER) {
+				$hasRequiredRole = true;
+				break;
+			}
+		}
+		if ($hasRequiredRole) {
+			$scriptCode = '
 			document.addEventListener("DOMContentLoaded", () => {
 				const menu = document.querySelector(".pkpPublication__tabs .pkpTabs__buttons");
 
@@ -100,15 +124,21 @@ class ImportMetadataFromXML extends GenericPlugin
 			});
 			';
 
-		$templateMgr->addJavaScript(
-			'importMetadataFromXML',
-			$scriptCode,
-			[
-				'contexts' => 'backend',
-				'priority' => STYLE_SEQUENCE_CORE,
-				'inline'   => true,
-			]
-		);
+			$templateMgr->addJavaScript(
+				'importMetadataFromXML',
+				$scriptCode,
+				[
+					'contexts' => 'backend',
+					'priority' => STYLE_SEQUENCE_CORE,
+					'inline'   => true,
+				]
+			);
+		} else {
+			// No mostrar el botón si no tiene el rol requerido
+			return false;
+		}		
+
+
 	}
 
 	public function setPageHandler($hookName, $params)
@@ -158,6 +188,13 @@ class ImportMetadataFromXML extends GenericPlugin
 			
 			$this->primaryLocale = $primaryLanguage;
 
+			//Generic method for manage locales
+			$detectedLocales = detectLocales($dom);
+
+			if (empty($detectedLocales)) {
+				$detectedLocales[] = $this->primaryLocale;
+			}
+
 			$warnings = [];
 
 			$front = $dom->getElementsByTagName('front')->item(0);
@@ -170,23 +207,66 @@ class ImportMetadataFromXML extends GenericPlugin
 			$publication->setData('subtitle', $dato, $primaryLanguage);
 
 			if ($articleMeta->getElementsByTagName('trans-title-group')->count()) {
-				$dato = @$articleMeta->getElementsByTagName('trans-title-group')->item(0)->getElementsByTagName('trans-title')->item(0)->nodeValue;
-				$publication->setData('title', $dato, $secondaryaLanguage);
-				$dato = @$articleMeta->getElementsByTagName('trans-title-group')->item(0)->getElementsByTagName('trans-subtitle')->item(0)->nodeValue;
-				$publication->setData('subtitle', $dato, $secondaryaLanguage);
+				$transTitleGroup = $articleMeta->getElementsByTagName('trans-title-group')->item(0);
+				foreach ($transTitleGroup->getElementsByTagName('trans-title') as $transTitle) {
+					$lang = $transTitle->getAttribute('xml:lang') ?: $secondaryLanguage;
+					$dato = $transTitle->nodeValue;
+					$publication->setData('title', $dato, $lang);
+				}
+				foreach ($transTitleGroup->getElementsByTagName('trans-subtitle') as $transSubtitle) {
+					$lang = $transSubtitle->getAttribute('xml:lang') ?: $secondaryLanguage;
+					$dato = $transSubtitle->nodeValue;
+					$publication->setData('subtitle', $dato, $lang);
+				}
 			}
 
-			$abstractNode = @$articleMeta->getElementsByTagName('abstract')->item(0);
-			if ($abstractNode) {
-				$abstractNode->removeChild($abstractNode->getElementsByTagName('title')->item(0));
-				$publication->setData('abstract', $abstractNode->nodeValue, $primaryLanguage);
-			}
-			if ($articleMeta->getElementsByTagName('trans-abstract')->count()) {
-				$element = $articleMeta->getElementsByTagName('trans-abstract')->item(0);
-				$element->removeChild($element->getElementsByTagName('title')->item(0));
-				$publication->setData('abstract', $element->nodeValue, $secondaryaLanguage);
-			}
 
+			/***
+			 * Abstract
+			 */
+			 $abstractNode = @$articleMeta->getElementsByTagName('abstract')->item(0);
+
+			 if ($abstractNode) {
+				 $abstractContent = '';
+			 
+				 foreach ($abstractNode->childNodes as $childNode) {
+					 if ($childNode->nodeName === 'title' && $childNode->parentNode->nodeName === 'abstract') {
+						 continue;
+					 }
+					 if ($childNode->nodeName === 'sec') {
+						 $abstractContent .= processAbstractSecNode($childNode);
+					 }else if ($childNode->nodeName === 'p') {
+						$abstractContent .= processAbstractChildNodes($childNode);
+					}
+				 }
+				 $publication->setData('abstract', $abstractContent, $primaryLanguage);
+			 }
+
+			$transAbstracts = $articleMeta->getElementsByTagName('trans-abstract');
+			if ($transAbstracts) {
+				$transAbstractContent = '';
+				foreach ($transAbstracts as $transAbstract) {
+					$locale = $transAbstract->getAttribute('xml:lang');
+				
+					foreach ($transAbstract->childNodes as $childNode) {
+						if ($childNode->nodeName === 'title'&& $childNode->parentNode->nodeName === 'trans-abstract') {
+							continue;
+						}
+						if ($childNode->nodeName === 'sec') {
+							$transAbstractContent .= processAbstractSecNode($childNode);
+						}else if ($childNode->nodeName === 'p') {
+							$transAbstractContent .= processAbstractChildNodes($childNode);
+						}
+					}
+					if (!empty($locale) && !empty($transAbstractContent)) {
+						$publication->setData('abstract', $transAbstractContent, $locale);
+					}
+				}		
+			}	
+			
+			/***
+			 * Authors
+			 */
 			$authors = $publication->getData('authors');
 
 			foreach ($authors as $author) {
@@ -209,7 +289,7 @@ class ImportMetadataFromXML extends GenericPlugin
 			foreach ($authorUserGroups as $authorUserGroup) {
 				if ($authorUserGroup->getAbbrev('en') === 'AU') {
 					$userGroupId = $authorUserGroup->getId();
-					error_log("authorUserGroupID: " . print_r($authorUserGroup->getId(), true));
+					//error_log("authorUserGroupID: " . print_r($authorUserGroup->getId(), true));
 					continue;
 				}
 			}
@@ -228,17 +308,28 @@ class ImportMetadataFromXML extends GenericPlugin
 				$data = $contrib->getElementsByTagName('name')->item(0)->getElementsByTagName('given-names')->item(0)->nodeValue;
 				$data = mb_convert_case(mb_strtolower($data), MB_CASE_TITLE, 'UTF-8');
 
-				$newAuthor->setGivenName([$this->primaryLocale => $data], null);
-				$newAuthor->setGivenName(['es' => $data], null);
+				$localizedData = [];
+				foreach ($detectedLocales as $locale) {
+					$localizedData[$locale] = $data;
+				}
+				$newAuthor->setGivenName($localizedData, null);
 
 
 				$data = $contrib->getElementsByTagName('name')->item(0)->getElementsByTagName('surname')->item(0)->nodeValue;
 				$data = mb_convert_case(mb_strtolower($data), MB_CASE_TITLE, 'UTF-8');
-				$newAuthor->setFamilyName([$this->primaryLocale => $data], null);
-				$newAuthor->setFamilyName(['es' => $data], null);
+				$localizedData = [];
+				foreach ($detectedLocales as $locale) {
+					$localizedData[$locale] = $data;
+				}
+				$newAuthor->setFamilyName($localizedData, null);
 
 				$data = @$contrib->getElementsByTagName('bio')->item(0)->nodeValue;
-				$newAuthor->setBiography([$this->primaryLocale => $data], null);
+				$localizedData = [];
+				foreach ($detectedLocales as $locale) {
+					$localizedData[$locale] = $data;
+				}
+				$newAuthor->setBiography($localizedData, null);
+				
 
 				$email = '';
 				$orcid = '';
@@ -247,6 +338,7 @@ class ImportMetadataFromXML extends GenericPlugin
 
 				$correspRef = '';
 				$affRef = '';
+
 
 				foreach ($contrib->getElementsByTagName('xref') as $ref) {
 					$refType = $ref->getAttribute('ref-type');
@@ -265,6 +357,11 @@ class ImportMetadataFromXML extends GenericPlugin
 					}
 					$orcid = @$contrib->getElementsByTagName('aff')->item(0)->getElementsByTagName('ext-link')->item(0)->nodeValue;
 					$affiliation = @$contrib->getElementsByTagName('aff')->item(0)->getElementsByTagName('institution')->item(0)->nodeValue;
+				}
+				if (empty($email)) {
+					if ($contrib->getElementsByTagName('email')->count()) {
+						$email = @$contrib->getElementsByTagName('email')->item(0)->nodeValue;
+					}
 				}
 
 				if (empty($email)) {
@@ -308,7 +405,12 @@ class ImportMetadataFromXML extends GenericPlugin
 
 				$newAuthor->setEmail($email);
 				$newAuthor->setCountry($country);
-				$newAuthor->setAffiliation([$this->primaryLocale => $affiliation], null);
+				$localizedData = [];
+				foreach ($detectedLocales as $locale) {
+					$localizedData[$locale] = $affiliation;
+				}
+				$newAuthor->setAffiliation($localizedData, null);				
+				
 				$newAuthor->setOrcid($orcid);
 
 				$newAuthor->setUserGroupId($userGroupId);
@@ -324,10 +426,35 @@ class ImportMetadataFromXML extends GenericPlugin
 			if ($primaryContactAuthor) {
 				$publication->setData('primaryContactId', $primaryContactAuthor);
 			}
+
+			/***
+			 * DOI
+			 */
 			$articlesId = @$articleMeta->getElementsByTagName('article-id');
 			foreach ($articlesId as $id) {
 				if ($id->getAttribute('pub-id-type') === 'doi') {
-					$publication->setData('pub-id::doi', $id->nodeValue);
+					
+					$doiValue = $id->nodeValue;
+					$currentDoiId = $publication->getData('doiId');
+					$doiRepo = Repo::doi();
+					$doi = null;
+
+					if ($currentDoiId) {
+						$doi = $doiRepo->get($currentDoiId);
+					}
+					if ($doi) {
+						$doi->setData('doi', $doiValue);
+						$doiRepo->edit($doi, []);
+					} else {
+						$doi = $doiRepo->newDataObject();
+						$doi->setData('contextId', $contextId);
+						$doi->setData('publicationId', $publication->getId());
+						$doi->setData('doi', $doiValue);
+						$doi->setData('doiType', 'doi');
+						$doiId = $doiRepo->add($doi);
+						$publication->setData('doiId', $doiId);
+						Repo::publication()->edit($publication, []);
+					}
 				}
 			}
 
@@ -365,42 +492,123 @@ class ImportMetadataFromXML extends GenericPlugin
 				}
 			}
 
+			/***
+			* References
+			*/
 			if ($dom->getElementsByTagName('back')->count()) {
 				$citations = [];
 				$mixedCitations = $dom->getElementsByTagName('back')->item(0)->getElementsByTagName('mixed-citation');
+				
 				foreach ($mixedCitations as $citation) {
-					$citations[] = $citation->nodeValue;
+					$citationContent = normalizeSpaces(getNodeText($citation));
+					$citations[] = $citationContent;
 				}
 				$publication->setData('citationsRaw', implode("\n", $citations));
 			}
+
 
 			$currentUser = Application::get()->getRequest()->getUser();
 			$userId = $currentUser ? $currentUser->getId() : 1; // Use 1 as default
 
 			Repo::publication()->edit($publication, ['userId' => $userId]);
 
+			/***
+			 * Keywords
+			 */
 			$keywordsGroups = @$articleMeta->getElementsByTagName('kwd-group');
 			$localeKeywords = [];
+			$detectedLocales = [];
 			foreach ($keywordsGroups as $keywordsGroup) {
+				//TODO refactor for multiple uses and cases
 				$locale = $keywordsGroup->getAttribute('xml:lang');
 				$keywords = [];
-				foreach ($keywordsGroup->getElementsByTagName('kwd') as $keywordNode) {
-					$keywords[] = $keywordNode->nodeValue;
+				$isJELGroup = false;
+
+				if (!empty($locale) && !in_array($locale, $detectedLocales)) {
+					$detectedLocales[] = $locale;
+				}				
+				foreach ($keywordsGroup->getElementsByTagName('title') as $titleNode) {
+					$titleText = trim($titleNode->nodeValue);
+					if (stripos($titleText, 'JEL') !== false) {
+						$isJELGroup = true;
+						break;
+					}
+				}				
+				if ($isJELGroup) {
+					foreach ($keywordsGroup->getElementsByTagName('compound-kwd-part') as $compoundNode) {
+						$jelCodes[] = trim($compoundNode->nodeValue);
+					}					
+				}else{
+					foreach ($keywordsGroup->getElementsByTagName('kwd') as $keywordNode) {
+						$keywords[] = trim($keywordNode->nodeValue);
+					}
+					if (!empty($keywords)) {
+						if (!isset($localeKeywords[$locale])) {
+							$localeKeywords[$locale] = [];
+						}
+						$localeKeywords[$locale] = array_merge($localeKeywords[$locale], $keywords);
+					}
 				}
-				$localeKeywords[$this->transformLocale($locale)] = $keywords;
 			}
+			if (!empty($jelCodes)) {
+				if (empty($localeKeywords)) {
+					foreach ($detectedLocales as $locale) {
+						$localeKeywords[$locale] = $jelCodes;
+					}
+				} else {
+					foreach ($localeKeywords as $lang => &$keywords) {
+						$keywords = array_merge($keywords, $jelCodes);
+					}
+					unset($keywords);
+				}
+			}
+
 			$submissionKeywordDao = DAORegistry::getDAO('SubmissionKeywordDAO');
 			$submissionKeywordDao->insertKeywords($localeKeywords, $publication->getId());
 
+			/****
+			 * Founding
+			 */
 
-			$foundingGroups = @$front->getElementsByTagName('funding-group');
+			$fundingGroups = @$front->getElementsByTagName('funding-group');
 			$localeFoundings = [];
-			foreach ($foundingGroups as $foundingGroup) {
-				$institution = $foundingGroup->getElementsByTagName('institution')->item(0)->nodeValue;
-				$localeFoundings[$this->primaryLocale][] = $institution;
+			$fundingStatement = null;
+			
+			foreach ($fundingGroups as $fundingGroup) {
+				$statementNodes = $fundingGroup->getElementsByTagName('funding-statement');
+				if ($statementNodes->length > 0) {
+					$fundingStatement = trim($statementNodes->item(0)->nodeValue);
+					break;
+				}
 			}
+			
+			if ($fundingStatement) {
+				$detectedLocales = [];
+			
+				$xpath = new DOMXPath($front->ownerDocument);
+				$nodesWithLang = $xpath->query('//*[@xml:lang]');
+			
+				foreach ($nodesWithLang as $node) {
+					//TODO refactor for multiple uses
+					$locale = $node->getAttribute('xml:lang');
+					if (!empty($locale) && !in_array($locale, $detectedLocales)) {
+						$detectedLocales[] = $locale;
+					}
+				}
+			
+				if (empty($detectedLocales)) {
+					$detectedLocales[] = $this->primaryLocale;
+				}
+			
+				foreach ($detectedLocales as $locale) {
+					$localeFoundings[$locale][] = $fundingStatement;
+				}
+			}
+			
 			$submissionAgencyDao = DAORegistry::getDAO('SubmissionAgencyDAO');
 			$submissionAgencyDao->insertAgencies($localeFoundings, $publication->getId());
+			
+
 
 			$return = __('plugins.generic.importMetadata.importSuccessful');
 			foreach ($warnings as $warning) {

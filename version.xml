@@ -15,8 +15,8 @@
 <version>
 	<application>importMetadataFromXML</application>
 	<type>plugins.generic</type>
-	<release>0.0.1.0</release>
-	<date>2024-10-29</date>
+	<release>0.0.2.0</release>
+	<date>2024-12-19</date>
 	<lazy-load>1</lazy-load>
 	<sitewide>1</sitewide>
 	<class>ImportMetadataFromXML</class>
