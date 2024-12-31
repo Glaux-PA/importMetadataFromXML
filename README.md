@@ -50,3 +50,5 @@ works in OJS 3.4.x
 - [x] **DOI: Now in a separate section and not being registered -> ✔️**
   - It is generating an incorrect DOI; it should fetch it from the XML.
 - [x] **Refactor**
+- [] **Languages: Review language handling**
+  - Use those from the XML and those configured in the journal->publication settings
