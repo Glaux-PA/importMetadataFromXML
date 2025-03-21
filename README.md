@@ -1,5 +1,7 @@
 Import metadata from XML
+
 Version for OJS 3.3.X
+
 This plugin load publcation metadata from a XML galley.
 
 
