@@ -3,6 +3,31 @@ Import metadata from XML
 This plugin load publcation metadata from a XML galley.
 
 
+## Instructions
+### Plugin Installation Guide for OJS
+
+You can install this plugin in two ways:
+
+#### 1. Upload via the OJS Web Interface
+- Go to the **Dashboard** > **Website Settings** > **Plugins**.
+- Click on **Upload a New Plugin**.
+- Select the plugin `.tar.gz` or `.zip` archive and upload it.
+- Once installed, make sure to **enable** the plugin.
+
+#### 2. Manual Installation
+- Upload or extract the plugin folder into the appropriate directory:
+  - ojs/plugins/generic
+- Activate plugin from plugin from "Website -> Plugins"
+
+### Plugin Usage
+* In the submission desired, add galley
+    - ![Add galley](doc/img/submission_add_galley.png)
+* Upload xml for import metadata
+    - ![Xml galley](doc/img/submission_galley_add_xml.png)
+* Apply "Import metadata"
+    - ![Import metadata](doc/img/submission_import_metadata_button.png)
+* Review metadata added, title, description, colaborators, references, etc...
+
 
 
 
