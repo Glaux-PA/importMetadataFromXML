@@ -55,7 +55,8 @@ class ImportMetadataFromXML extends GenericPlugin
 	public function register($category, $path, $mainContextId = null)
 	{
 
-		if (!parent::register($category, $path, $mainContextId)) return false;
+		if (!parent::register($category, $path, $mainContextId))
+			return false;
 
 		if ($this->getEnabled($mainContextId)) {
 			HookRegistry::register('Form::config::after', [$this, 'loadButton']);
@@ -84,10 +85,10 @@ class ImportMetadataFromXML extends GenericPlugin
 			return false;
 		}
 		$userGroups = Repo::userGroup()
-        ->getCollector()
-        ->filterByUserIds([$user->getId()])
-        ->filterByContextIds([$context->getId()])
-        ->getMany();
+			->getCollector()
+			->filterByUserIds([$user->getId()])
+			->filterByContextIds([$context->getId()])
+			->getMany();
 
 		//Add security to hide the button based on user role, ROLE_ID_MANAGER
 		$hasRequiredRole = false;
@@ -108,11 +109,9 @@ class ImportMetadataFromXML extends GenericPlugin
 					buttonImport.setAttribute("aria-controls", "Import");
 					buttonImport.id = "importMetadata-button";
 					buttonImport.className = "pkpTabs__button";
-
 					buttonImport.addEventListener("click", () => {
 						const submissionId = document.querySelector(".pkpWorkflow__identificationId").innerText;
 						const fetchUrl = "' . $fileImport . '?submissionId=" + submissionId;
-						
 						if (confirm("' . __('plugins.generic.importMetadata.confirmImport') . '")) {
 							fetch(fetchUrl)
 								.then(response => response.json())
@@ -138,28 +137,30 @@ class ImportMetadataFromXML extends GenericPlugin
 				[
 					'contexts' => 'backend',
 					'priority' => STYLE_SEQUENCE_CORE,
-					'inline'   => true,
+					'inline' => true,
 				]
 			);
 		} else {
 			return false;
-		}		
+		}
 
 
 	}
 
 	public function setPageHandler($hookName, $params)
 	{
+
+
 		$page = $params[0];
 		$request = Application::get()->getRequest();
 		$contextId = $request->getContext()->getId();
 		$context = $request->getContext();
-
+		error_log($page);
 		if ($page == 'importMetadataFromXML') {
 
 			$submissionId = $_GET['submissionId'];
-        
-			$submission = Repo::submission()->get($submissionId);	
+
+			$submission = Repo::submission()->get($submissionId);
 			if (!$submission) {
 				throw new Exception("Submission not found, ID: $submissionId");
 			}
@@ -168,6 +169,9 @@ class ImportMetadataFromXML extends GenericPlugin
 				throw new Exception("Publication for submission not found, submissionID: $submissionId");
 			}
 			$submissionGalleys = $submission->getGalleys();
+
+
+
 
 			$xmlSubmissionFile = null;
 			foreach ($submissionGalleys as $submissionGalley) {
@@ -193,22 +197,25 @@ class ImportMetadataFromXML extends GenericPlugin
 
 			if (!empty($xmlLang)) {
 				$primaryLanguage = $xmlLang;
-			}else{
+			} else {
 				$primaryLanguage = $context ? $context->getPrimaryLocale() : null;
 			}
 
 			$supportedLanguages = $context ? $context->getSupportedSubmissionLocales() : [];
 
 			$xpath = new DOMXPath($dom);
-			$nodesWithLang = $xpath->query('//front//*[@xml:lang]');			
+			$nodesWithLang = $xpath->query('//front//*[@xml:lang]');
+
 			$xmlLanguages = [];
 			foreach ($nodesWithLang as $node) {
 				$lang = $node->getAttribute('xml:lang');
 				if ($lang && !in_array($lang, $xmlLanguages)) {
 					$xmlLanguages[] = $lang;
 				}
+
+
 			}
-			
+
 			$allLanguages = array_unique(array_merge(
 				$primaryLanguage ? [$primaryLanguage] : [],
 				$supportedLanguages,
@@ -219,47 +226,64 @@ class ImportMetadataFromXML extends GenericPlugin
 			$front = $dom->getElementsByTagName('front')->item(0);
 
 			$articleMeta = $front->getElementsByTagName('article-meta')->item(0);
-			$title = $articleMeta->getElementsByTagName('title-group')->item(0)->getElementsByTagName('article-title')->item(0)->nodeValue;
-			$subtitle = @$articleMeta->getElementsByTagName('title-group')->item(0)->getElementsByTagName('subtitle')->item(0)->nodeValue;
-		
-			foreach ($allLanguages as $language) {
-				$publication->setData('title', $title, $language);
-				$publication->setData('subtitle', $subtitle, $language);
-			}
 
-			$publication->setData('title', $title, $primaryLanguage);			
-			$publication->setData('subtitle', $subtitle, $primaryLanguage);			
+			$titleNode = $articleMeta->getElementsByTagName('title-group')->item(0)->getElementsByTagName('article-title')->item(0);
+			$title = $titleNode ? $titleNode->nodeValue : '';
+			$titleLang = $titleNode && $titleNode->hasAttribute('xml:lang') ? $titleNode->getAttribute('xml:lang') : $primaryLanguage;
+
+			$subtitleNode = $articleMeta->getElementsByTagName('title-group')->item(0)->getElementsByTagName('subtitle')->item(0);
+			$subtitle = $subtitleNode ? $subtitleNode->nodeValue : '';
+			$subtitleLang = $subtitleNode && $subtitleNode->hasAttribute('xml:lang') ? $subtitleNode->getAttribute('xml:lang') : $primaryLanguage;
+
+			$localeTitles = [];
+			$localeSubtitles = [];
+			if ($title && $titleLang) {
+				$localeTitles[$titleLang] = $title;
+			}
+			if ($subtitle && $subtitleLang) {
+				$localeSubtitles[$subtitleLang] = $subtitle;
+			}
 
 			if ($articleMeta->getElementsByTagName('trans-title-group')->count()) {
-				$transTitleGroup = $articleMeta->getElementsByTagName('trans-title-group')->item(0);
-				foreach ($transTitleGroup->getElementsByTagName('trans-title') as $transTitle) {
-					$lang = $transTitle->getAttribute('xml:lang');
-					if (!empty($lang)) {
-						$title = $transTitle->nodeValue;
-						$publication->setData('title', $title, $lang);
+				foreach ($articleMeta->getElementsByTagName('trans-title-group') as $transTitleGroup) {
+					$transTitle = $transTitleGroup->getElementsByTagName('trans-title')->item(0);
+					$transSubtitle = $transTitleGroup->getElementsByTagName('trans-subtitle')->item(0);
+					$lang = $transTitle->hasAttribute('xml:lang') ? $transTitle->getAttribute('xml:lang') : null;
+					if ($lang && $transTitle) {
+						$localeTitles[$lang] = $transTitle->nodeValue;
 					}
-				}
-				foreach ($transTitleGroup->getElementsByTagName('trans-subtitle') as $transSubtitle) {
-					$lang = $transTitle->getAttribute('xml:lang');
-					if (!empty($lang)) {
-						$subtitle = $transSubtitle->nodeValue;
-						$publication->setData('subtitle', $subtitle, $lang);
-					}	
+					if ($lang && $transSubtitle) {
+						$localeSubtitles[$lang] = $transSubtitle->nodeValue;
+					}
 				}
 			}
 
 
+
+			foreach ($allLanguages as $lang) {
+
+				$titleValue = isset($localeTitles[$lang]) ? $localeTitles[$lang] : ($localeTitles[$primaryLanguage] ?? '');
+				$subtitleValue = isset($localeSubtitles[$lang]) ? $localeSubtitles[$lang] : ($localeSubtitles[$primaryLanguage] ?? '');
+
+				if ($titleValue) {
+					$publication->setData('title', $titleValue, $lang);
+				}
+				if ($subtitleValue) {
+					$publication->setData('subtitle', $subtitleValue, $lang);
+				}
+			}
 			/***
 			 * Abstract
 			 */
-			$abstractNode = @$articleMeta->getElementsByTagName('abstract')->item(0);
-
-			abstractParse($abstractNode, $allLanguages, $primaryLanguage, $publication);
-
+			$abstractNode = $articleMeta->getElementsByTagName('abstract')->item(0);
 			$transAbstracts = $articleMeta->getElementsByTagName('trans-abstract');
-			transAbstractParse($transAbstracts, $publication);
 
-			
+			$localeAbstracts = abstractParse($abstractNode, $allLanguages, $primaryLanguage, $publication);
+			$transLocaleAbstracts = transAbstractParse($transAbstracts, $publication);
+
+			$allAbstracts = array_merge($localeAbstracts, $transLocaleAbstracts);
+			assignAbstracts($allAbstracts, $allLanguages, $primaryLanguage, $publication);
+
 			/***
 			 * Authors
 			 */
@@ -278,7 +302,7 @@ class ImportMetadataFromXML extends GenericPlugin
 				->filterByContextIds([$contextId])
 				->filterByRoleIds([ROLE_ID_AUTHOR])
 				->getMany();
-			
+
 			$userGroupId = null;
 			foreach ($authorUserGroups as $authorUserGroup) {
 				if ($authorUserGroup->getAbbrev('en') === 'AU') {
@@ -302,7 +326,7 @@ class ImportMetadataFromXML extends GenericPlugin
 				$publication->setData('primaryContactId', $primaryContactAuthor);
 			}
 
-			
+
 			/***
 			 * DOI
 			 */
@@ -310,12 +334,9 @@ class ImportMetadataFromXML extends GenericPlugin
 			doiParse($articlesId, $contextId, $publication);
 
 			/*
-			$volume = @$articleMeta->getElementsByTagName('volume')->item(0)->nodeValue;
-			$publication->setData('volume', $volume);
-
-			$issue = @$articleMeta->getElementsByTagName('issue')->item(0)->nodeValue;
-			$publication->setData('issueId', $issue);
-			*/
+			 *$volume = @$articleMeta->getElementsByTagName('volume')->item(0)->nodeValue;
+			 *$publication->setData('volume', $volume);
+			 */
 
 			$page = @$articleMeta->getElementsByTagName('elocation-id')->item(0)->nodeValue;
 			if (empty($page)) {
@@ -344,12 +365,12 @@ class ImportMetadataFromXML extends GenericPlugin
 			}
 
 			/***
-			* References
-			*/
+			 * References
+			 */
 			if ($dom->getElementsByTagName('back')->count()) {
 				$citations = [];
 				$mixedCitations = $dom->getElementsByTagName('back')->item(0)->getElementsByTagName('mixed-citation');
-				
+
 				foreach ($mixedCitations as $citation) {
 					$citationContent = normalizeSpaces(getNodeText($citation));
 					$citations[] = $citationContent;
@@ -363,14 +384,14 @@ class ImportMetadataFromXML extends GenericPlugin
 
 			Repo::publication()->edit($publication, ['userId' => $userId]);
 
-			
+
 			/***
 			 * Keywords
 			 */
 			$keywordsGroups = @$articleMeta->getElementsByTagName('kwd-group');
 
 			$localeKeywords = keywordsParse($keywordsGroups, $allLanguages, $primaryLanguage);
-			
+
 			$submissionKeywordDao = DAORegistry::getDAO('SubmissionKeywordDAO');
 			$submissionKeywordDao->insertKeywords($localeKeywords, $publication->getId());
 
@@ -379,9 +400,9 @@ class ImportMetadataFromXML extends GenericPlugin
 			 * Funding
 			 */
 			$fundingGroups = @$front->getElementsByTagName('funding-group');
-			
+
 			$localeFoundings = fundingParse($fundingGroups, $allLanguages);
-			
+
 			$submissionAgencyDao = DAORegistry::getDAO('SubmissionAgencyDAO');
 			$submissionAgencyDao->insertAgencies($localeFoundings, $publication->getId());
 
