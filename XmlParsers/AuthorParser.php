@@ -1,5 +1,5 @@
 <?php
-function authorParse($contrib, $allLanguages,$publication, $request, $userGroupId, $cont){
+function authorParse($contrib, $allLanguages,$publication, $request, $userGroupId, $cont, $authorNotes=null){
 
 
     $newAuthor = new Author();
@@ -70,9 +70,9 @@ function authorParse($contrib, $allLanguages,$publication, $request, $userGroupI
         }
     }
 
-    if (empty($email)) {
+    if (empty($email) && isset($authorNotes)) {
         if (isset($correspRef) && !empty($correspRef)) {
-            foreach (@$articleMeta->getElementsByTagName('author-notes')->item(0)->getElementsByTagName('corresp') as $corresp) {
+            foreach ($authorNotes->getElementsByTagName('corresp') as $corresp) {
                 if ($corresp->getAttribute('id') === $correspRef) {
                     $email =  $corresp->getElementsByTagName('email')->item(0)->nodeValue;
                     break;

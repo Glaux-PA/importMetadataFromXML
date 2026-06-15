@@ -310,9 +310,10 @@ class ImportMetadataFromXML extends GenericPlugin
 					continue;
 				}
 			}
+			$authorNotes = @$articleMeta->getElementsByTagName('author-notes')->item(0);
 
 			foreach ($contribGroup->getElementsByTagName('contrib') as $contrib) {
-				$newAuthor = authorParse($contrib, $allLanguages, $publication, $request, $userGroupId, $cont);
+				$newAuthor = authorParse($contrib, $allLanguages, $publication, $request, $userGroupId, $cont, $authorNotes);
 
 				$authorId = Repo::author()->add($newAuthor);
 
