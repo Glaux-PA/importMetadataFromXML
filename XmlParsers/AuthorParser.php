@@ -1,6 +1,5 @@
 <?php
-function authorParse($contrib, $allLanguages,$publication, $request, $userGroupId, $cont){
-
+function authorParse($contrib, $allLanguages,$publication, $request, $userGroupId, $cont, $authorNotes = null, $affById = []) {
 
     $newAuthor = new Author();
     $newAuthor->setData('publicationId', $publication->getId());
@@ -70,9 +69,9 @@ function authorParse($contrib, $allLanguages,$publication, $request, $userGroupI
         }
     }
 
-    if (empty($email)) {
+    if (empty($email) && isset($authorNotes)) {
         if (isset($correspRef) && !empty($correspRef)) {
-            foreach (@$articleMeta->getElementsByTagName('author-notes')->item(0)->getElementsByTagName('corresp') as $corresp) {
+            foreach ($authorNotes->getElementsByTagName('corresp') as $corresp) {
                 if ($corresp->getAttribute('id') === $correspRef) {
                     $email =  $corresp->getElementsByTagName('email')->item(0)->nodeValue;
                     break;
@@ -95,16 +94,15 @@ function authorParse($contrib, $allLanguages,$publication, $request, $userGroupI
     if (empty($orcid)) {
         $orcid = @$contrib->getElementsByTagName('contrib-id')->item(0)->nodeValue;
     }
+
     if (empty($country) || empty($affiliation)) {
-        if (isset($affRef) && !empty($affRef)) {
-            foreach ($contrib->getElementsByTagName('aff') as $aff) {
-                if ($aff->getAttribute('id') === $affRef) {
-                    if ($aff->getElementsByTagName('country')->count()) {
-                        $country = @$aff->getElementsByTagName('country')->item(0)->getAttribute('country');
-                    }
-                    $affiliation = @$aff->getElementsByTagName('institution')->item(0)->nodeValue;
-                    break;
-                }
+        if (!empty($affRef) && isset($affById[$affRef])) {
+            $aff = $affById[$affRef];
+            if (empty($country) && $aff->getElementsByTagName('country')->count()) {
+                $country = @$aff->getElementsByTagName('country')->item(0)->getAttribute('country');
+            }
+            if (empty($affiliation) && $aff->getElementsByTagName('institution')->count()) {
+                $affiliation = @$aff->getElementsByTagName('institution')->item(0)->nodeValue;
             }
         }
     }
