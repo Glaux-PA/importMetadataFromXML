@@ -216,9 +216,10 @@ class ImportMetadataFromXML extends GenericPlugin
 
 			}
 
+			// Import content only for languages present in the XML, not for every
+			// journal locale (don't copy one language into all of them)
 			$allLanguages = array_unique(array_merge(
 				$primaryLanguage ? [$primaryLanguage] : [],
-				$supportedLanguages,
 				$xmlLanguages
 			));
 
@@ -261,15 +262,11 @@ class ImportMetadataFromXML extends GenericPlugin
 
 
 			foreach ($allLanguages as $lang) {
-
-				$titleValue = isset($localeTitles[$lang]) ? $localeTitles[$lang] : ($localeTitles[$primaryLanguage] ?? '');
-				$subtitleValue = isset($localeSubtitles[$lang]) ? $localeSubtitles[$lang] : ($localeSubtitles[$primaryLanguage] ?? '');
-
-				if ($titleValue) {
-					$publication->setData('title', $titleValue, $lang);
+				if (!empty($localeTitles[$lang])) {
+					$publication->setData('title', $localeTitles[$lang], $lang);
 				}
-				if ($subtitleValue) {
-					$publication->setData('subtitle', $subtitleValue, $lang);
+				if (!empty($localeSubtitles[$lang])) {
+					$publication->setData('subtitle', $localeSubtitles[$lang], $lang);
 				}
 			}
 			/***

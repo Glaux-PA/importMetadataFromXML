@@ -53,9 +53,8 @@ function transAbstractParse($transAbstracts, $publication)
 function assignAbstracts($localeAbstracts, $allLanguages, $primaryLanguage, $publication)
 {
     foreach ($allLanguages as $lang) {
-        $abstractValue = isset($localeAbstracts[$lang]) ? $localeAbstracts[$lang] : ($localeAbstracts[$primaryLanguage] ?? '');
-        if ($abstractValue) {
-            $publication->setData('abstract', $abstractValue, $lang);
+        if (!empty($localeAbstracts[$lang])) {
+            $publication->setData('abstract', $localeAbstracts[$lang], $lang);
         }
     }
 }
