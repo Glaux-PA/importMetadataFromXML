@@ -1,5 +1,5 @@
 <?php
-function authorParse($contrib, $allLanguages,$publication, $request, $userGroupId, $cont){
+function authorParse($contrib, $allLanguages,$publication, $request, $userGroupId, $cont, $articleMeta = null){
 
 
     $newAuthor = new Author();
@@ -70,11 +70,17 @@ function authorParse($contrib, $allLanguages,$publication, $request, $userGroupI
     }
 
     if (empty($email)) {
-        if (isset($correspRef) && !empty($correspRef)) {
-            foreach (@$articleMeta->getElementsByTagName('author-notes')->item(0)->getElementsByTagName('corresp') as $corresp) {
-                if ($corresp->getAttribute('id') === $correspRef) {
-                    $email =  $corresp->getElementsByTagName('email')->item(0)->nodeValue;
-                    break;
+        if (isset($correspRef) && !empty($correspRef) && $articleMeta) {
+            $authorNotes = $articleMeta->getElementsByTagName('author-notes')->item(0);
+            if ($authorNotes) {
+                foreach ($authorNotes->getElementsByTagName('corresp') as $corresp) {
+                    if ($corresp->getAttribute('id') === $correspRef) {
+                        $emailNode = $corresp->getElementsByTagName('email')->item(0);
+                        if ($emailNode) {
+                            $email = $emailNode->nodeValue;
+                        }
+                        break;
+                    }
                 }
             }
         }

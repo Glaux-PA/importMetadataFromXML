@@ -272,7 +272,7 @@ class ImportMetadataFromXML extends GenericPlugin
 			}
 
 			foreach ($contribGroup->getElementsByTagName('contrib') as $contrib) {
-				$newAuthor = authorParse($contrib, $allLanguages, $publication, $request, $userGroupId, $cont);
+				$newAuthor = authorParse($contrib, $allLanguages, $publication, $request, $userGroupId, $cont, $articleMeta);
 
 				$authorId = $authorDao->insertObject($newAuthor);
 
