@@ -14,7 +14,6 @@
  */
 
 
-import('lib.pkp.classes.plugins.GenericPlugin');
 require_once __DIR__ . '/helpers/AbstractProcessor.php';
 require_once __DIR__ . '/helpers/TextFormater.php';
 require_once __DIR__ . '/helpers/LocaleHelper.php';
@@ -28,7 +27,11 @@ require_once __DIR__ . '/XmlParsers/AuthorParser.php';
 
 use APP\facades\Repo;
 use APP\author\Author;
+use APP\core\Services;
+use PKP\controlledVocab\ControlledVocab;
+use PKP\plugins\GenericPlugin;
 use PKP\security\Role;
+use PKP\userGroup\UserGroup;
 
 
 class ImportMetadataFromXML extends GenericPlugin
@@ -76,7 +79,7 @@ class ImportMetadataFromXML extends GenericPlugin
 		$user = $request->getUser();
 		if ($context) {
 			$contextPath = $context->getPath();
-			$fileImport = $request->getBaseUrl() . DIRECTORY_SEPARATOR . 'index.php' . DIRECTORY_SEPARATOR . $contextPath . '/importMetadataFromXML';
+			$fileImport = $request->getBaseUrl() . '/index.php/' . $contextPath . '/importMetadataFromXML';
 		} else {
 			$fileImport = $request->getBaseUrl() . '/index.php/importMetadataFromXML';
 		}
@@ -85,50 +88,69 @@ class ImportMetadataFromXML extends GenericPlugin
 			return false;
 		}
 		$userGroups = Repo::userGroup()
-			->getCollector()
-			->filterByUserIds([$user->getId()])
-			->filterByContextIds([$context->getId()])
-			->getMany();
+			->userUserGroups($user->getId(), $context->getId());
 
 		//Add security to hide the button based on user role, ROLE_ID_MANAGER
 		$hasRequiredRole = false;
 		foreach ($userGroups as $userGroup) {
-			if ($userGroup->getRoleId() === ROLE_ID_MANAGER) {
+			if ($userGroup->roleId == ROLE_ID_MANAGER) {
 				$hasRequiredRole = true;
 				break;
 			}
 		}
 		if ($hasRequiredRole) {
 			$scriptCode = '
-			document.addEventListener("DOMContentLoaded", () => {
-				const menu = document.querySelector(".pkpPublication__tabs .pkpTabs__buttons");
+			(function () {
+				var importUrl = ' . json_encode($fileImport) . ';
+				var importLabel = ' . json_encode(__('plugins.generic.importMetadata.name')) . ';
+				var confirmText = ' . json_encode(__('plugins.generic.importMetadata.confirmImport')) . ';
 
-				if (menu) {
-					const buttonImport = document.createElement("button");
-					buttonImport.innerText = "' . __('plugins.generic.importMetadata.name') . '";
-					buttonImport.setAttribute("aria-controls", "Import");
-					buttonImport.id = "importMetadata-button";
-					buttonImport.className = "pkpTabs__button";
-					buttonImport.addEventListener("click", () => {
-						const submissionId = document.querySelector(".pkpWorkflow__identificationId").innerText;
-						const fetchUrl = "' . $fileImport . '?submissionId=" + submissionId;
-						if (confirm("' . __('plugins.generic.importMetadata.confirmImport') . '")) {
-							fetch(fetchUrl)
-								.then(response => response.json())
-								.then(data => {
-									if (!alert(data)) {
-										window.location.reload();
-									}
-								})
-								.catch(error => {
-									console.error("Error in request:", error);
-								});
-						}
-					});
-
-					menu.append(buttonImport);
+				function runImport(submissionId) {
+					if (!window.confirm(confirmText)) {
+						return;
+					}
+					fetch(importUrl + "?submissionId=" + submissionId)
+						.then(function (response) { return response.json(); })
+						.then(function (data) {
+							window.alert(data);
+							window.location.reload();
+						})
+						.catch(function (error) {
+							console.error("importMetadataFromXML:", error);
+						});
 				}
-			});
+
+				function register() {
+					if (!window.pkp || !pkp.registry || !pkp.registry.storeExtend) {
+						return false;
+					}
+					pkp.registry.storeExtend("workflow", function (piniaContext) {
+						piniaContext.store.extender.extendFn("getMenuItems", function (menuItems, args) {
+							var publication = menuItems.find(function (item) {
+								return item.key === "publication";
+							});
+							if (!publication || !publication.items || !args.submission) {
+								return menuItems;
+							}
+							if (publication.items.some(function (item) { return item.key === "importMetadataFromXML"; })) {
+								return menuItems;
+							}
+							var submissionId = args.submission.id;
+							publication.items.push({
+								key: "importMetadataFromXML",
+								label: importLabel,
+								command: function () { runImport(submissionId); }
+							});
+							return menuItems;
+						});
+					});
+					return true;
+				}
+
+				if (!register()) {
+					document.addEventListener("DOMContentLoaded", register);
+				}
+			})();
 			';
 
 			$templateMgr->addJavaScript(
@@ -136,7 +158,7 @@ class ImportMetadataFromXML extends GenericPlugin
 				$scriptCode,
 				[
 					'contexts' => 'backend',
-					'priority' => STYLE_SEQUENCE_CORE,
+					'priority' => STYLE_SEQUENCE_LAST,
 					'inline' => true,
 				]
 			);
@@ -190,7 +212,10 @@ class ImportMetadataFromXML extends GenericPlugin
 			$contents = Services::get('file')->fs->read($submissionFile->getData('path'));
 
 			$dom = new DOMDocument();
-			$dom->loadXML($contents);
+			if (!@$dom->loadXML($contents) || !$dom->documentElement) {
+				echo json_encode(__('plugins.generic.importMetadata.notGalley'));
+				die;
+			}
 
 			$rootElement = $dom->documentElement;
 			$xmlLang = $rootElement->getAttribute('xml:lang');
@@ -225,6 +250,10 @@ class ImportMetadataFromXML extends GenericPlugin
 
 			$warnings = [];
 			$front = $dom->getElementsByTagName('front')->item(0);
+			if (!$front) {
+				echo json_encode(__('plugins.generic.importMetadata.notGalley'));
+				die;
+			}
 
 			$articleMeta = $front->getElementsByTagName('article-meta')->item(0);
 
@@ -294,16 +323,14 @@ class ImportMetadataFromXML extends GenericPlugin
 
 			$primaryContactAuthor = false;
 			$cont = 0;
-			$authorUserGroups = Repo::userGroup()
-				->getCollector()
-				->filterByContextIds([$contextId])
-				->filterByRoleIds([ROLE_ID_AUTHOR])
-				->getMany();
+			$authorUserGroups = UserGroup::withRoleIds([ROLE_ID_AUTHOR])
+				->withContextIds([$contextId])
+				->get();
 
 			$userGroupId = null;
 			foreach ($authorUserGroups as $authorUserGroup) {
-				if ($authorUserGroup->getAbbrev('en') === 'AU') {
-					$userGroupId = $authorUserGroup->getId();
+				if (($authorUserGroup->abbrev['en'] ?? null) === 'AU') {
+					$userGroupId = $authorUserGroup->id;
 					continue;
 				}
 			}
@@ -359,20 +386,29 @@ class ImportMetadataFromXML extends GenericPlugin
 			if ($pubDate->getElementsByTagName('day')->count()) {
 				$dayPublished = $pubDate->getElementsByTagName('day')->item(0)->nodeValue;
 			}
-			$monthPublished = @$pubDate->getElementsByTagName('month')->item(0)->nodeValue;
+			$monthPublished = '01';
+			if ($pubDate->getElementsByTagName('month')->count()) {
+				$monthPublished = $pubDate->getElementsByTagName('month')->item(0)->nodeValue;
+			}
 			$yearPublished = @$pubDate->getElementsByTagName('year')->item(0)->nodeValue;
-			$publication->setData('datePublished', $yearPublished . '-' . $monthPublished . '-' . $dayPublished);
+			if ($yearPublished) {
+				$publication->setData('datePublished', $yearPublished . '-' . $monthPublished . '-' . $dayPublished);
+			}
 
-			$licenses = $articleMeta->getElementsByTagName('permissions')->item(0)->getElementsByTagName('license');
-			foreach ($licenses as $li) {
-				if ($li->getAttribute('license-type') === 'open-access') {
-					$publication->setData('licenseUrl', $li->getAttribute('xlink:href'));
+			$permissions = $articleMeta->getElementsByTagName('permissions')->item(0);
+			if ($permissions) {
+				$licenses = $permissions->getElementsByTagName('license');
+				foreach ($licenses as $li) {
+					if ($li->getAttribute('license-type') === 'open-access') {
+						$publication->setData('licenseUrl', $li->getAttribute('xlink:href'));
+					}
 				}
 			}
 
 			/***
 			 * References
 			 */
+			$editParams = [];
 			if ($dom->getElementsByTagName('back')->count()) {
 				$citations = [];
 				$mixedCitations = $dom->getElementsByTagName('back')->item(0)->getElementsByTagName('mixed-citation');
@@ -381,14 +417,15 @@ class ImportMetadataFromXML extends GenericPlugin
 					$citationContent = normalizeSpaces(getNodeText($citation));
 					$citations[] = $citationContent;
 				}
-				$publication->setData('citationsRaw', implode("\n", $citations));
+				$editParams['citationsRaw'] = implode("\n", $citations);
 			}
 
 
 			$currentUser = Application::get()->getRequest()->getUser();
 			$userId = $currentUser ? $currentUser->getId() : 1; // Use 1 as default
 
-			Repo::publication()->edit($publication, ['userId' => $userId]);
+			$editParams['userId'] = $userId;
+			Repo::publication()->edit($publication, $editParams);
 
 
 			/***
@@ -398,8 +435,12 @@ class ImportMetadataFromXML extends GenericPlugin
 
 			$localeKeywords = keywordsParse($keywordsGroups, $allLanguages, $primaryLanguage);
 
-			$submissionKeywordDao = DAORegistry::getDAO('SubmissionKeywordDAO');
-			$submissionKeywordDao->insertKeywords($localeKeywords, $publication->getId());
+			Repo::controlledVocab()->insertBySymbolic(
+				ControlledVocab::CONTROLLED_VOCAB_SUBMISSION_KEYWORD,
+				$localeKeywords,
+				Application::ASSOC_TYPE_PUBLICATION,
+				$publication->getId()
+			);
 
 
 			/****
@@ -409,8 +450,12 @@ class ImportMetadataFromXML extends GenericPlugin
 
 			$localeFoundings = fundingParse($fundingGroups, $allLanguages);
 
-			$submissionAgencyDao = DAORegistry::getDAO('SubmissionAgencyDAO');
-			$submissionAgencyDao->insertAgencies($localeFoundings, $publication->getId());
+			Repo::controlledVocab()->insertBySymbolic(
+				ControlledVocab::CONTROLLED_VOCAB_SUBMISSION_AGENCY,
+				$localeFoundings,
+				Application::ASSOC_TYPE_PUBLICATION,
+				$publication->getId()
+			);
 
 
 			$return = __('plugins.generic.importMetadata.importSuccessful');

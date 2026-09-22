@@ -1,4 +1,5 @@
 <?php
+use APP\facades\Repo;
 function authorParse($contrib, $allLanguages,$publication, $request, $userGroupId, $cont, $authorNotes = null, $affById = []) {
 
     $newAuthor = new Author();
@@ -113,7 +114,11 @@ function authorParse($contrib, $allLanguages,$publication, $request, $userGroupI
     foreach ($allLanguages as $locale) {
         $localizedData[$locale] = $affiliation;
     }
-    $newAuthor->setAffiliation($localizedData, null);				
+    if (!empty($affiliation)) {
+        $newAffiliation = Repo::affiliation()->newDataObject();
+        $newAffiliation->setName($localizedData, null);
+        $newAuthor->setAffiliations([$newAffiliation]);
+    }
     
     $newAuthor->setOrcid($orcid);
 
