@@ -71,7 +71,13 @@ class ImportMetadataFromXML extends GenericPlugin
 			return false;
 		}
 
-		$fileImport = $request->getBaseUrl() . '/index.php/' . $context->getPath() . '/importMetadataFromXML';
+		$fileImport = $request->getDispatcher()->url(
+			$request,
+			Application::ROUTE_PAGE,
+			$context->getPath(),
+			'importMetadataFromXML',
+			'import'
+		);
 
 		$userGroups = Repo::userGroup()
 			->userUserGroups($user->getId(), $context->getId());
