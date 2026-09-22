@@ -74,7 +74,10 @@ function authorParse($contrib, $allLanguages,$publication, $request, $userGroupI
         if (isset($correspRef) && !empty($correspRef)) {
             foreach ($authorNotes->getElementsByTagName('corresp') as $corresp) {
                 if ($corresp->getAttribute('id') === $correspRef) {
-                    $email =  $corresp->getElementsByTagName('email')->item(0)->nodeValue;
+                    $emailNode = $corresp->getElementsByTagName('email')->item(0);
+                    if ($emailNode) {
+                        $email = $emailNode->nodeValue;
+                    }
                     break;
                 }
             }
