@@ -52,7 +52,7 @@ function keywordsParse($keywordsGroups, $allLanguages, $primaryLanguage){
     if (!empty($primaryKeywords)) {
         foreach ($allLanguages as $lang) {
             if (!isset($localeKeywords[$lang]) || empty($localeKeywords[$lang])) {
-                if(!is_array($localeKeywords[$lang])){
+                if (!isset($localeKeywords[$lang]) || !is_array($localeKeywords[$lang])) {
                     $localeKeywords[$lang] = [];
                 }
                 $localeKeywords[$lang] = array_merge($localeKeywords[$lang], $primaryKeywords);
@@ -63,7 +63,7 @@ function keywordsParse($keywordsGroups, $allLanguages, $primaryLanguage){
     if (!empty($jelCodes)) {
         foreach ($allLanguages as $lang) {
             if (!isset($localeJELCodes[$lang]) || empty($localeJELCodes[$lang])) {
-                if(!is_array($localeJELCodes[$lang])){
+                if (!isset($localeJELCodes[$lang]) || !is_array($localeJELCodes[$lang])) {
                     $localeJELCodes[$lang] = [];
                 }
                 $localeJELCodes[$lang] = array_merge($localeJELCodes[$lang], $jelCodes);
