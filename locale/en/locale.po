@@ -22,3 +22,6 @@ msgstr "Do you want to import the metadata from the galley XML and overwrite the
 
 msgid "plugins.generic.importMetadata.importSuccessful"
 msgstr "The import was successful"
+
+msgid "plugins.generic.importMetadata.description"
+msgstr "Imports the publication metadata (title, abstract, authors, keywords, DOI, references...) from the JATS XML galley of the submission."

@@ -37,7 +37,7 @@ class ImportMetadataFromXML extends GenericPlugin
 	 */
 	public function getDescription()
 	{
-		return 'Import Metadata From XML';
+		return __('plugins.generic.importMetadata.description');
 	}
 
 	/**
