@@ -9,7 +9,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2023-08-19T10:24:49-05:00\n"
 "PO-Revision-Date: 2023-08-19T10:24:49-05:00\n"
-"Language: pt \n"
+"Language: pt_PT \n"
 
 msgid "plugins.generic.importMetadata.name"
 msgstr "Importar metadados"
