@@ -13,9 +13,6 @@ function abstractParse($abstractNode, $allLanguages, $primaryLanguage, $publicat
                $abstractContent .= processAbstractChildNodes($childNode);
            }
         }
-        foreach ($allLanguages as $language) {
-           $publication->setData('abstract', $abstractContent, $language);
-       }
         $publication->setData('abstract', $abstractContent, $primaryLanguage);
     }
 }

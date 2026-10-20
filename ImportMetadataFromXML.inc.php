@@ -202,7 +202,6 @@ class ImportMetadataFromXML extends GenericPlugin
 			
 			$allLanguages = array_unique(array_merge(
 				$primaryLanguage ? [$primaryLanguage] : [],
-				$supportedLanguages,
 				$xmlLanguages
 			));			
 
@@ -214,11 +213,6 @@ class ImportMetadataFromXML extends GenericPlugin
 			$title = $articleMeta->getElementsByTagName('title-group')->item(0)->getElementsByTagName('article-title')->item(0)->nodeValue;
 			$subtitle = @$articleMeta->getElementsByTagName('title-group')->item(0)->getElementsByTagName('subtitle')->item(0)->nodeValue;
 		
-			foreach ($allLanguages as $language) {
-				$publication->setData('title', $title, $language);
-				$publication->setData('subtitle', $subtitle, $language);
-			}
-
 			$publication->setData('title', $title, $primaryLanguage);			
 			$publication->setData('subtitle', $subtitle, $primaryLanguage);			
 
