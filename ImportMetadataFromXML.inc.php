@@ -400,6 +400,7 @@ class ImportMetadataFromXML extends GenericPlugin
 			$localeKeywords = keywordsParse($keywordsGroups, $allLanguages, $primaryLanguage);
 
 			$submissionKeywordDao = DAORegistry::getDAO('SubmissionKeywordDAO');
+			$localeKeywords = array_merge($submissionKeywordDao->getKeywords($publication->getId()), $localeKeywords);
 			$submissionKeywordDao->insertKeywords($localeKeywords, $publication->getId());
 
 
