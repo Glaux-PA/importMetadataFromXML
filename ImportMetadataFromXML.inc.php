@@ -304,12 +304,16 @@ class ImportMetadataFromXML extends GenericPlugin
 				->getMany();
 
 			$userGroupId = null;
+			$firstUserGroupId = null;
 			foreach ($authorUserGroups as $authorUserGroup) {
-				if ($authorUserGroup->getAbbrev('en') === 'AU') {
+				if (!$firstUserGroupId || $authorUserGroup->getId() < $firstUserGroupId) {
+					$firstUserGroupId = $authorUserGroup->getId();
+				}
+				if (in_array('AU', (array) $authorUserGroup->getData('abbrev'))) {
 					$userGroupId = $authorUserGroup->getId();
-					continue;
 				}
 			}
+			$userGroupId = $userGroupId ?: $firstUserGroupId;
 			$authorNotes = @$articleMeta->getElementsByTagName('author-notes')->item(0);
 
 			$affById = [];
