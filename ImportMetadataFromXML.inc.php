@@ -253,7 +253,9 @@ class ImportMetadataFromXML extends GenericPlugin
 			 */
 			$authorDao = DAORegistry::getDAO('AuthorDAO');
 			$authors = $publication->getData('authors');
+			$existingUserGroupId = null;
 			foreach ($authors as $author) {
+				$existingUserGroupId = $existingUserGroupId ?: $author->getData('userGroupId');
 				$authorDao->deleteObject($author);
 			}			
 
@@ -276,7 +278,7 @@ class ImportMetadataFromXML extends GenericPlugin
 					$userGroupId = $authorUserGroup->getId();
 				}
 			}
-			$userGroupId = $userGroupId ?: $firstUserGroupId;
+			$userGroupId = $existingUserGroupId ?: ($userGroupId ?: $firstUserGroupId);
 
 			foreach ($contribGroup->getElementsByTagName('contrib') as $contrib) {
 				$newAuthor = authorParse($contrib, $allLanguages, $publication, $request, $userGroupId, $cont, $articleMeta);
