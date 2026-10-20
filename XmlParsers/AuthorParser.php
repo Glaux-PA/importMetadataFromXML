@@ -12,7 +12,9 @@ function authorParse($contrib, $allLanguages,$publication, $request, $userGroupI
     }
     
     $data = $contrib->getElementsByTagName('name')->item(0)->getElementsByTagName('given-names')->item(0)->nodeValue;
-    $data = mb_convert_case(mb_strtolower($data), MB_CASE_TITLE, 'UTF-8');
+    if (mb_strtoupper($data) === $data || mb_strtolower($data) === $data) {
+        $data = mb_convert_case(mb_strtolower($data), MB_CASE_TITLE, 'UTF-8');
+    }
     
     $localizedData = [];
     foreach ($allLanguages as $locale) {
@@ -21,7 +23,9 @@ function authorParse($contrib, $allLanguages,$publication, $request, $userGroupI
     $newAuthor->setGivenName($localizedData, null);
 
     $data = $contrib->getElementsByTagName('name')->item(0)->getElementsByTagName('surname')->item(0)->nodeValue;
-    $data = mb_convert_case(mb_strtolower($data), MB_CASE_TITLE, 'UTF-8');
+    if (mb_strtoupper($data) === $data || mb_strtolower($data) === $data) {
+        $data = mb_convert_case(mb_strtolower($data), MB_CASE_TITLE, 'UTF-8');
+    }
     $localizedData = [];
     foreach ($allLanguages as $locale) {
         $localizedData[$locale] = $data;
