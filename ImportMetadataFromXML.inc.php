@@ -287,57 +287,59 @@ class ImportMetadataFromXML extends GenericPlugin
 			/***
 			 * Authors
 			 */
-			$authors = $publication->getData('authors');
-
-			$existingUserGroupId = null;
-			foreach ($authors as $author) {
-				$existingUserGroupId = $existingUserGroupId ?: $author->getData('userGroupId');
-				Repo::author()->delete($author);
-			}
-
 			$contribGroup = @$articleMeta->getElementsByTagName('contrib-group')->item(0);
 
-			$primaryContactAuthor = false;
-			$cont = 0;
-			$authorUserGroups = Repo::userGroup()
-				->getCollector()
-				->filterByContextIds([$contextId])
-				->filterByRoleIds([ROLE_ID_AUTHOR])
-				->getMany();
+			if ($contribGroup) {
+				$authors = $publication->getData('authors');
 
-			$userGroupId = null;
-			$firstUserGroupId = null;
-			foreach ($authorUserGroups as $authorUserGroup) {
-				if (!$firstUserGroupId || $authorUserGroup->getId() < $firstUserGroupId) {
-					$firstUserGroupId = $authorUserGroup->getId();
+				$existingUserGroupId = null;
+				foreach ($authors as $author) {
+					$existingUserGroupId = $existingUserGroupId ?: $author->getData('userGroupId');
+					Repo::author()->delete($author);
 				}
-				if (in_array('AU', (array) $authorUserGroup->getData('abbrev'))) {
-					$userGroupId = $authorUserGroup->getId();
+
+				$primaryContactAuthor = false;
+				$cont = 0;
+				$authorUserGroups = Repo::userGroup()
+					->getCollector()
+					->filterByContextIds([$contextId])
+					->filterByRoleIds([ROLE_ID_AUTHOR])
+					->getMany();
+
+				$userGroupId = null;
+				$firstUserGroupId = null;
+				foreach ($authorUserGroups as $authorUserGroup) {
+					if (!$firstUserGroupId || $authorUserGroup->getId() < $firstUserGroupId) {
+						$firstUserGroupId = $authorUserGroup->getId();
+					}
+					if (in_array('AU', (array) $authorUserGroup->getData('abbrev'))) {
+						$userGroupId = $authorUserGroup->getId();
+					}
 				}
+				$userGroupId = $existingUserGroupId ?: ($userGroupId ?: $firstUserGroupId);
+				$authorNotes = @$articleMeta->getElementsByTagName('author-notes')->item(0);
+
+				$affById = [];
+				foreach ($articleMeta->getElementsByTagName('aff') as $affNode) {
+					$affId = $affNode->getAttribute('id');
+					if ($affId !== '' && !isset($affById[$affId])) {
+						$affById[$affId] = $affNode;
+					}
+				}
+
+				foreach ($contribGroup->getElementsByTagName('contrib') as $contrib) {
+					$newAuthor = authorParse($contrib, $allLanguages, $publication, $request, $userGroupId, $cont, $authorNotes, $affById);
+
+					$authorId = Repo::author()->add($newAuthor);
+
+					if ($newAuthor->getPrimaryContact() || !$primaryContactAuthor) {
+						$primaryContactAuthor = $authorId;
+					}
+					$cont++;
+				}
+
+				$publication->setData('primaryContactId', $primaryContactAuthor ?: null);
 			}
-			$userGroupId = $existingUserGroupId ?: ($userGroupId ?: $firstUserGroupId);
-			$authorNotes = @$articleMeta->getElementsByTagName('author-notes')->item(0);
-
-			$affById = [];
-			foreach ($articleMeta->getElementsByTagName('aff') as $affNode) {
-				$affId = $affNode->getAttribute('id');
-				if ($affId !== '' && !isset($affById[$affId])) {
-					$affById[$affId] = $affNode;
-				}
-			}
-
-			foreach ($contribGroup->getElementsByTagName('contrib') as $contrib) {
-				$newAuthor = authorParse($contrib, $allLanguages, $publication, $request, $userGroupId, $cont, $authorNotes, $affById);
-
-				$authorId = Repo::author()->add($newAuthor);
-
-				if ($newAuthor->getPrimaryContact() || !$primaryContactAuthor) {
-					$primaryContactAuthor = $authorId;
-				}
-				$cont++;
-			}
-
-			$publication->setData('primaryContactId', $primaryContactAuthor ?: null);
 
 
 			/***
