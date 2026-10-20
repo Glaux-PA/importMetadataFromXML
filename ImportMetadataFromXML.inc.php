@@ -251,47 +251,49 @@ class ImportMetadataFromXML extends GenericPlugin
 			/***
 			 * Authors
 			 */
-			$authorDao = DAORegistry::getDAO('AuthorDAO');
-			$authors = $publication->getData('authors');
-			$existingUserGroupId = null;
-			foreach ($authors as $author) {
-				$existingUserGroupId = $existingUserGroupId ?: $author->getData('userGroupId');
-				$authorDao->deleteObject($author);
-			}			
-
 			$contribGroup = @$articleMeta->getElementsByTagName('contrib-group')->item(0);
 
-			$primaryContactAuthor = false;
-			$cont = 0;
-			$request = Application::get()->getRequest();
-			$userGroupDao = DAORegistry::getDAO('UserGroupDAO'); /* @var $userGroupDao UserGroupDAO */
-			$authorUserGroups = $userGroupDao->getByRoleId($request->getContext()->getId(), ROLE_ID_AUTHOR)->toArray();
-			
-			
-			$userGroupId = null;
-			$firstUserGroupId = null;
-			foreach ($authorUserGroups as $authorUserGroup) {
-				if (!$firstUserGroupId || $authorUserGroup->getId() < $firstUserGroupId) {
-					$firstUserGroupId = $authorUserGroup->getId();
+			if ($contribGroup) {
+				$authorDao = DAORegistry::getDAO('AuthorDAO');
+				$authors = $publication->getData('authors');
+				$existingUserGroupId = null;
+				foreach ($authors as $author) {
+					$existingUserGroupId = $existingUserGroupId ?: $author->getData('userGroupId');
+					$authorDao->deleteObject($author);
+				}			
+
+				$primaryContactAuthor = false;
+				$cont = 0;
+				$request = Application::get()->getRequest();
+				$userGroupDao = DAORegistry::getDAO('UserGroupDAO'); /* @var $userGroupDao UserGroupDAO */
+				$authorUserGroups = $userGroupDao->getByRoleId($request->getContext()->getId(), ROLE_ID_AUTHOR)->toArray();
+
+
+				$userGroupId = null;
+				$firstUserGroupId = null;
+				foreach ($authorUserGroups as $authorUserGroup) {
+					if (!$firstUserGroupId || $authorUserGroup->getId() < $firstUserGroupId) {
+						$firstUserGroupId = $authorUserGroup->getId();
+					}
+					if (in_array('AU', (array) $authorUserGroup->getData('abbrev'))) {
+						$userGroupId = $authorUserGroup->getId();
+					}
 				}
-				if (in_array('AU', (array) $authorUserGroup->getData('abbrev'))) {
-					$userGroupId = $authorUserGroup->getId();
+				$userGroupId = $existingUserGroupId ?: ($userGroupId ?: $firstUserGroupId);
+
+				foreach ($contribGroup->getElementsByTagName('contrib') as $contrib) {
+					$newAuthor = authorParse($contrib, $allLanguages, $publication, $request, $userGroupId, $cont, $articleMeta);
+
+					$authorId = $authorDao->insertObject($newAuthor);
+
+					if ($newAuthor->getPrimaryContact() || !$primaryContactAuthor) {
+						$primaryContactAuthor = $authorId;
+					}
+					$cont++;
 				}
+
+				$publication->setData('primaryContactId', $primaryContactAuthor ?: null);
 			}
-			$userGroupId = $existingUserGroupId ?: ($userGroupId ?: $firstUserGroupId);
-
-			foreach ($contribGroup->getElementsByTagName('contrib') as $contrib) {
-				$newAuthor = authorParse($contrib, $allLanguages, $publication, $request, $userGroupId, $cont, $articleMeta);
-
-				$authorId = $authorDao->insertObject($newAuthor);
-
-				if ($newAuthor->getPrimaryContact() || !$primaryContactAuthor) {
-					$primaryContactAuthor = $authorId;
-				}
-				$cont++;
-			}
-
-			$publication->setData('primaryContactId', $primaryContactAuthor ?: null);
 
 			/***
 			 * DOI
