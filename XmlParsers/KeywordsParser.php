@@ -12,7 +12,7 @@ function keywordsParse($keywordsGroups, $allLanguages, $primaryLanguage){
     $jelCodes = [];
     
     foreach ($keywordsGroups as $keywordsGroup) {
-        $locale = $keywordsGroup->getAttribute('xml:lang');
+        $locale = xmlLangToLocale($keywordsGroup->getAttribute('xml:lang'));
         $locale = !empty($locale) ? $locale : $primaryLanguage;
         $keywords = [];
         $isJELGroup = false;

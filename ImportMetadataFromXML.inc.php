@@ -196,7 +196,7 @@ class ImportMetadataFromXML extends GenericPlugin
 			$dom->loadXML($contents);
 
 			$rootElement = $dom->documentElement;
-			$xmlLang = $rootElement->getAttribute('xml:lang');
+			$xmlLang = xmlLangToLocale($rootElement->getAttribute('xml:lang'));
 
 			if (!empty($xmlLang)) {
 				$primaryLanguage = $xmlLang;
@@ -211,7 +211,7 @@ class ImportMetadataFromXML extends GenericPlugin
 
 			$xmlLanguages = [];
 			foreach ($nodesWithLang as $node) {
-				$lang = $node->getAttribute('xml:lang');
+				$lang = xmlLangToLocale($node->getAttribute('xml:lang'));
 				if ($lang && !in_array($lang, $xmlLanguages)) {
 					$xmlLanguages[] = $lang;
 				}
@@ -233,11 +233,11 @@ class ImportMetadataFromXML extends GenericPlugin
 
 			$titleNode = $articleMeta->getElementsByTagName('title-group')->item(0)->getElementsByTagName('article-title')->item(0);
 			$title = $titleNode ? $titleNode->nodeValue : '';
-			$titleLang = $titleNode && $titleNode->hasAttribute('xml:lang') ? $titleNode->getAttribute('xml:lang') : $primaryLanguage;
+			$titleLang = $titleNode && $titleNode->hasAttribute('xml:lang') ? xmlLangToLocale($titleNode->getAttribute('xml:lang')) : $primaryLanguage;
 
 			$subtitleNode = $articleMeta->getElementsByTagName('title-group')->item(0)->getElementsByTagName('subtitle')->item(0);
 			$subtitle = $subtitleNode ? $subtitleNode->nodeValue : '';
-			$subtitleLang = $subtitleNode && $subtitleNode->hasAttribute('xml:lang') ? $subtitleNode->getAttribute('xml:lang') : $primaryLanguage;
+			$subtitleLang = $subtitleNode && $subtitleNode->hasAttribute('xml:lang') ? xmlLangToLocale($subtitleNode->getAttribute('xml:lang')) : $primaryLanguage;
 
 			$localeTitles = [];
 			$localeSubtitles = [];
@@ -252,7 +252,7 @@ class ImportMetadataFromXML extends GenericPlugin
 				foreach ($articleMeta->getElementsByTagName('trans-title-group') as $transTitleGroup) {
 					$transTitle = $transTitleGroup->getElementsByTagName('trans-title')->item(0);
 					$transSubtitle = $transTitleGroup->getElementsByTagName('trans-subtitle')->item(0);
-					$lang = $transTitle->hasAttribute('xml:lang') ? $transTitle->getAttribute('xml:lang') : null;
+					$lang = $transTitle->hasAttribute('xml:lang') ? xmlLangToLocale($transTitle->getAttribute('xml:lang')) : null;
 					if ($lang && $transTitle) {
 						$localeTitles[$lang] = $transTitle->nodeValue;
 					}
