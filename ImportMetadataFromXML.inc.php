@@ -292,7 +292,7 @@ class ImportMetadataFromXML extends GenericPlugin
 			$articlesId = @$articleMeta->getElementsByTagName('article-id');
 			foreach ($articlesId as $id) {
 				if ($id->getAttribute('pub-id-type') === 'doi') {
-					$publication->setData('pub-id::doi', $id->nodeValue);
+					$publication->setData('pub-id::doi', preg_replace('~^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)~i', '', trim($id->nodeValue)));
 				}
 			}
 
