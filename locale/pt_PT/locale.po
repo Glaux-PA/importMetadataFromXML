@@ -23,5 +23,8 @@ msgstr "Deseja importar os metadados da composição final XML e substituir os a
 msgid "plugins.generic.importMetadata.importSuccessful"
 msgstr "A importação foi concluída com sucesso"
 
+msgid "plugins.generic.importMetadata.displayName"
+msgstr "Importar metadados a partir de XML"
+
 msgid "plugins.generic.importMetadata.description"
 msgstr "Importa os metadados da publicação (título, resumo, autores, palavras-chave, DOI, referências...) a partir da composição final XML JATS da submissão."

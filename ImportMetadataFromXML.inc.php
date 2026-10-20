@@ -38,7 +38,7 @@ class ImportMetadataFromXML extends GenericPlugin
 	 */
 	public function getDisplayName()
 	{
-		return 'Import Metadata From XML';
+		return __('plugins.generic.importMetadata.displayName');
 	}
 
 	/**
