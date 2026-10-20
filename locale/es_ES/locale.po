@@ -18,7 +18,7 @@ msgid "plugins.generic.importMetadata.notGalley"
 msgstr "No existe ninguna galerada XML. La importación no se ha podido realizar."
 
 msgid "plugins.generic.importMetadata.confirmImport"
-msgstr "¿Desea importar los metadatados de la galerada XML y sobreescribir los actuales?"
+msgstr "¿Desea importar los metadatos de la galerada XML y sobreescribir los actuales?"
 
 msgid "plugins.generic.importMetadata.importSuccessful"
 msgstr "La importación se ha realizado correctamente"
