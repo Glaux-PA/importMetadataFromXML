@@ -155,7 +155,6 @@ class ImportMetadataFromXML extends GenericPlugin
 		$request = Application::get()->getRequest();
 		$contextId = $request->getContext()->getId();
 		$context = $request->getContext();
-		error_log($page);
 		if ($page == 'importMetadataFromXML') {
 
 			$submissionId = $_GET['submissionId'];
