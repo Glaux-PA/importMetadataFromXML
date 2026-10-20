@@ -65,8 +65,6 @@ class ImportMetadataFromXML extends GenericPlugin
 		$context = $request->getContext();
 		$user = $request->getUser();
 
-		// The entry only makes sense inside a journal, for a logged in user.
-		// Without this guard $context->getId() below fatals on site level forms.
 		if (!$context || !$user) {
 			return false;
 		}
@@ -82,8 +80,6 @@ class ImportMetadataFromXML extends GenericPlugin
 		$userGroups = Repo::userGroup()
 			->userUserGroups($user->getId(), $context->getId());
 
-		// Cosmetic only: ImportMetadataHandler enforces the same roles server
-		// side. Hiding the entry is not an access control measure.
 		$allowedRoles = [Role::ROLE_ID_MANAGER, Role::ROLE_ID_SUB_EDITOR];
 		$hasRequiredRole = false;
 		foreach ($userGroups as $userGroup) {
@@ -172,13 +168,6 @@ class ImportMetadataFromXML extends GenericPlugin
 
 	}
 
-	/**
-	 * Route the import page to a handler that OJS can authorize.
-	 *
-	 * The work itself must NOT happen here: LoadHandler fires before any
-	 * authorization policy runs, so anything done inline would be reachable
-	 * by anonymous users.
-	 */
 	public function setPageHandler($hookName, $params)
 	{
 		$page = $params[0];

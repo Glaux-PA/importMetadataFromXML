@@ -57,12 +57,6 @@ class ImportMetadataHandler extends Handler
 		return parent::authorize($request, $args, $roleAssignments);
 	}
 
-	/**
-	 * Import the publication metadata from the submission's XML galley.
-	 *
-	 * @param array $args
-	 * @param PKPRequest $request
-	 */
 	public function import($args, $request)
 	{
 		if ($request->getRequestMethod() !== 'POST' || !$request->checkCSRF()) {
