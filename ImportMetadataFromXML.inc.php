@@ -285,15 +285,13 @@ class ImportMetadataFromXML extends GenericPlugin
 
 				$authorId = $authorDao->insertObject($newAuthor);
 
-				if ($newAuthor->getPrimaryContact()) {
+				if ($newAuthor->getPrimaryContact() || !$primaryContactAuthor) {
 					$primaryContactAuthor = $authorId;
 				}
 				$cont++;
 			}
 
-			if ($primaryContactAuthor) {
-				$publication->setData('primaryContactId', $primaryContactAuthor);
-			}
+			$publication->setData('primaryContactId', $primaryContactAuthor ?: null);
 
 			/***
 			 * DOI
