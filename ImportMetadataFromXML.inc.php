@@ -267,12 +267,16 @@ class ImportMetadataFromXML extends GenericPlugin
 			
 			
 			$userGroupId = null;
+			$firstUserGroupId = null;
 			foreach ($authorUserGroups as $authorUserGroup) {
-				if ($authorUserGroup->getAbbrev('en_US') === 'AU') {
+				if (!$firstUserGroupId || $authorUserGroup->getId() < $firstUserGroupId) {
+					$firstUserGroupId = $authorUserGroup->getId();
+				}
+				if (in_array('AU', (array) $authorUserGroup->getData('abbrev'))) {
 					$userGroupId = $authorUserGroup->getId();
-					continue;
 				}
 			}
+			$userGroupId = $userGroupId ?: $firstUserGroupId;
 
 			foreach ($contribGroup->getElementsByTagName('contrib') as $contrib) {
 				$newAuthor = authorParse($contrib, $allLanguages, $publication, $request, $userGroupId, $cont, $articleMeta);
