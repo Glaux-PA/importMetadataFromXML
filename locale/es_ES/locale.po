@@ -22,3 +22,6 @@ msgstr "¿Desea importar los metadatos de la galerada XML y sobreescribir los ac
 
 msgid "plugins.generic.importMetadata.importSuccessful"
 msgstr "La importación se ha realizado correctamente"
+
+msgid "plugins.generic.importMetadata.description"
+msgstr "Importa los metadatos de la publicación (título, resumen, autores, palabras clave, DOI, referencias...) desde la galerada XML JATS del envío."
