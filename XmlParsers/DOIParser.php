@@ -4,7 +4,7 @@ function doiParse($articlesId, $contextId, $publication){
     foreach ($articlesId as $id) {
         if ($id->getAttribute('pub-id-type') === 'doi') {
             
-            $doiValue = $id->nodeValue;
+            $doiValue = preg_replace('~^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)~i', '', trim($id->nodeValue));
             $currentDoiId = $publication->getData('doiId');
             $doiRepo = Repo::doi();
             $doi = null;
