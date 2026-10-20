@@ -12,13 +12,13 @@ msgstr ""
 "Language: pt \n"
 
 msgid "plugins.generic.importMetadata.name"
-msgstr "Importar metadatos"
+msgstr "Importar metadados"
 
 msgid "plugins.generic.importMetadata.notGalley"
-msgstr "Não há galera XML. Não foi possível concluir a importação."
+msgstr "Não existe nenhuma composição final XML. Não foi possível realizar a importação."
 
 msgid "plugins.generic.importMetadata.confirmImport"
-msgstr "Deseja importar as metadatas da galera XML e substituir as atuais?"
+msgstr "Deseja importar os metadados da composição final XML e substituir os atuais?"
 
 msgid "plugins.generic.importMetadata.importSuccessful"
-msgstr "A importação foi bem sucedida"
+msgstr "A importação foi concluída com sucesso"
