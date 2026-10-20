@@ -111,9 +111,12 @@ class ImportMetadataFromXML extends GenericPlugin
 					buttonImport.className = "pkpTabs__button";
 					buttonImport.addEventListener("click", () => {
 						const submissionId = document.querySelector(".pkpWorkflow__identificationId").innerText;
-						const fetchUrl = "' . $fileImport . '?submissionId=" + submissionId;
+						const fetchUrl = "' . $fileImport . '";
 						if (confirm("' . __('plugins.generic.importMetadata.confirmImport') . '")) {
-							fetch(fetchUrl)
+							fetch(fetchUrl, {
+								method: "POST",
+								body: new URLSearchParams({submissionId: submissionId, csrfToken: "' . $request->getSession()->getCSRFToken() . '"})
+							})
 								.then(response => response.json())
 								.then(data => {
 									if (!alert(data)) {
@@ -157,11 +160,12 @@ class ImportMetadataFromXML extends GenericPlugin
 		$context = $request->getContext();
 		if ($page == 'importMetadataFromXML') {
 
-			$submissionId = $_GET['submissionId'];
-
+			$user = $request->getUser();
+			$submissionId = (int) $request->getUserVar('submissionId');
 			$submission = Repo::submission()->get($submissionId);
-			if (!$submission) {
-				throw new Exception("Submission not found, ID: $submissionId");
+			if (!$request->isPost() || !$request->checkCSRF() || !$user || !$user->hasRole([Role::ROLE_ID_MANAGER], $contextId) || !$submission || $submission->getData('contextId') != $contextId) {
+				echo json_encode(__('user.authorization.accessDenied'));
+				die;
 			}
 			$publication = $submission->getCurrentPublication();
 			if (!$publication) {
