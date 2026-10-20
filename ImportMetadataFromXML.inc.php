@@ -289,7 +289,9 @@ class ImportMetadataFromXML extends GenericPlugin
 			 */
 			$authors = $publication->getData('authors');
 
+			$existingUserGroupId = null;
 			foreach ($authors as $author) {
+				$existingUserGroupId = $existingUserGroupId ?: $author->getData('userGroupId');
 				Repo::author()->delete($author);
 			}
 
@@ -313,7 +315,7 @@ class ImportMetadataFromXML extends GenericPlugin
 					$userGroupId = $authorUserGroup->getId();
 				}
 			}
-			$userGroupId = $userGroupId ?: $firstUserGroupId;
+			$userGroupId = $existingUserGroupId ?: ($userGroupId ?: $firstUserGroupId);
 			$authorNotes = @$articleMeta->getElementsByTagName('author-notes')->item(0);
 
 			$affById = [];
