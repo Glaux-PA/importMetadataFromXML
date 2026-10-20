@@ -10,15 +10,13 @@
 
     function keywordsParse($keywordsGroups, $allLanguages, $primaryLanguage) {
         $localeKeywords = [];
-        $localeJELCodes = [];
-        $primaryKeywords = [];
     
         foreach ($keywordsGroups as $keywordsGroup) {
             $locale = $keywordsGroup->getAttribute('xml:lang');
     
             $locale = $locale ?? null;
             $iso3Code = $locale ? PKPLocale::getIso3FromIso1(substr($locale, 0, 2)) : null;
-            $locale = $iso3Code ? PKPLocale::getLocaleFromIso3($iso3Code) : null;
+            $locale = $iso3Code ? PKPLocale::getLocaleFromIso3($iso3Code) : ($locale ? null : $primaryLanguage);
     
             $keywords = [];
             $jelCodes = [];
@@ -46,44 +44,15 @@
                         $localeKeywords[$locale] = $keywords;
                     }
                 }
-    
-                if ($locale == $primaryLanguage) {
-                    $primaryKeywords = $keywords;
-                }
-            }
-        }
-    
-        if (!empty($primaryKeywords)) {
-            foreach ($allLanguages as $lang) {
-                if (!isset($localeKeywords[$lang]) || empty($localeKeywords[$lang])) {
-                    $localeKeywords[$lang] = $primaryKeywords;
-                }
             }
         }
     
         if (!empty($jelCodes)) {
-            foreach ($allLanguages as $lang) {
-                if (!isset($localeJELCodes[$lang])) {
-                    $localeJELCodes[$lang] = [];
-                }
-                if (!is_array($localeJELCodes[$lang])) {
-                    $localeJELCodes[$lang] = [];
-                }
-                if (is_array($jelCodes)) {
-                    $localeJELCodes[$lang] = array_merge($localeJELCodes[$lang], $jelCodes);
-                }
+            foreach (array_unique(array_merge(array_keys($localeKeywords), [$primaryLanguage])) as $lang) {
+                $localeKeywords[$lang] = array_merge($localeKeywords[$lang] ?? [], $jelCodes);
             }
         }
-    
-        foreach ($allLanguages as $lang) {
-            if (!isset($localeKeywords[$lang])) {
-                $localeKeywords[$lang] = [];
-            }
-            if (isset($localeJELCodes[$lang]) && is_array($localeJELCodes[$lang])) {
-                $localeKeywords[$lang] = array_merge($localeKeywords[$lang], $localeJELCodes[$lang]);
-            }
-        }
-    
+
         return $localeKeywords;
     }
     
