@@ -9,12 +9,12 @@
  */
 function keywordsParse($keywordsGroups, $allLanguages, $primaryLanguage){
     $localeKeywords = [];
+    $jelCodes = [];
     
     foreach ($keywordsGroups as $keywordsGroup) {
         $locale = $keywordsGroup->getAttribute('xml:lang');
         $locale = !empty($locale) ? $locale : $primaryLanguage;
         $keywords = [];
-        $jelCodes = []; 
         $isJELGroup = false;
     
         foreach ($keywordsGroup->getElementsByTagName('title') as $titleNode) {
