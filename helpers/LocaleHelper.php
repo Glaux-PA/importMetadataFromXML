@@ -1,8 +1,5 @@
 <?php
 
-/**
- * Maps an xml:lang value (es, es-ES, pt-BR...) to one of the journal's locales.
- */
 function xmlLangToLocale($lang) {
     $locales = Application::get()->getRequest()->getContext()->getSupportedSubmissionLocales();
     $locale = str_replace('-', '_', $lang);
