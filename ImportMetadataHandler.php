@@ -192,7 +192,9 @@ class ImportMetadataHandler extends Handler
 		if ($contribGroup) {
 			$authors = $publication->getData('authors');
 
+			$existingUserGroupId = null;
 			foreach ($authors ?? [] as $author) {
+				$existingUserGroupId = $existingUserGroupId ?: $author->getData('userGroupId');
 				Repo::author()->delete($author);
 			}
 
@@ -212,7 +214,7 @@ class ImportMetadataHandler extends Handler
 					$userGroupId = $authorUserGroup->id;
 				}
 			}
-			$userGroupId = $userGroupId ?: $firstUserGroupId;
+			$userGroupId = $existingUserGroupId ?: ($userGroupId ?: $firstUserGroupId);
 			$authorNotes = $articleMeta->getElementsByTagName('author-notes')->item(0);
 
 			$affById = [];
