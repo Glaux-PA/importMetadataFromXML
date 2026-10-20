@@ -14,7 +14,7 @@ function abstractParse($abstractNode, $allLanguages, $primaryLanguage, $publicat
                 $abstractContent .= processAbstractChildNodes($childNode);
             }
         }
-        $locale = $abstractNode->hasAttribute('xml:lang') ? $abstractNode->getAttribute('xml:lang') : $primaryLanguage;
+        $locale = $abstractNode->hasAttribute('xml:lang') ? xmlLangToLocale($abstractNode->getAttribute('xml:lang')) : $primaryLanguage;
         if ($locale && !empty($abstractContent)) {
             $localeAbstracts[$locale] = $abstractContent;
         }
@@ -30,7 +30,7 @@ function transAbstractParse($transAbstracts, $publication)
 
     if ($transAbstracts) {
         foreach ($transAbstracts as $transAbstract) {
-            $locale = $transAbstract->getAttribute('xml:lang');
+            $locale = xmlLangToLocale($transAbstract->getAttribute('xml:lang'));
             $transAbstractContent = '';
             foreach ($transAbstract->childNodes as $childNode) {
                 if ($childNode->nodeName === 'title' && $childNode->parentNode->nodeName === 'trans-abstract') {
