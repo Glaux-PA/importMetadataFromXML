@@ -203,12 +203,16 @@ class ImportMetadataHandler extends Handler
 				->get();
 
 			$userGroupId = null;
+			$firstUserGroupId = null;
 			foreach ($authorUserGroups as $authorUserGroup) {
-				if (($authorUserGroup->abbrev['en'] ?? null) === 'AU') {
+				if (!$firstUserGroupId || $authorUserGroup->id < $firstUserGroupId) {
+					$firstUserGroupId = $authorUserGroup->id;
+				}
+				if (in_array('AU', (array) $authorUserGroup->abbrev)) {
 					$userGroupId = $authorUserGroup->id;
-					break;
 				}
 			}
+			$userGroupId = $userGroupId ?: $firstUserGroupId;
 			$authorNotes = $articleMeta->getElementsByTagName('author-notes')->item(0);
 
 			$affById = [];
