@@ -46,7 +46,7 @@ function authorParse($contrib, $allLanguages,$publication, $request, $userGroupI
     $affiliation = '';
 
     $correspRef = '';
-    $affRef = '';
+    $affRefs = [];
 
 
     foreach ($contrib->getElementsByTagName('xref') as $ref) {
@@ -54,7 +54,7 @@ function authorParse($contrib, $allLanguages,$publication, $request, $userGroupI
         if ($refType === 'corresp') {
             $correspRef =  $ref->getAttribute('rid');
         } elseif ($refType === 'aff') {
-            $affRef =  $ref->getAttribute('rid');
+            $affRefs = array_merge($affRefs, preg_split('/\s+/', trim($ref->getAttribute('rid'))));
         }
     }
 
@@ -102,17 +102,20 @@ function authorParse($contrib, $allLanguages,$publication, $request, $userGroupI
         $orcid = @$contrib->getElementsByTagName('contrib-id')->item(0)->nodeValue;
     }
 
-    if (empty($country) || empty($affiliation)) {
-        if (!empty($affRef) && isset($affById[$affRef])) {
-            $aff = $affById[$affRef];
-            if (empty($country) && $aff->getElementsByTagName('country')->count()) {
-                $country = @$aff->getElementsByTagName('country')->item(0)->getAttribute('country');
-            }
-            if (empty($affiliation) && $aff->getElementsByTagName('institution')->count()) {
-                $affiliation = @$aff->getElementsByTagName('institution')->item(0)->nodeValue;
-            }
+    $affiliations = !empty($affiliation) ? [$affiliation] : [];
+    foreach ($affRefs as $affRef) {
+        if (!isset($affById[$affRef])) {
+            continue;
+        }
+        $aff = $affById[$affRef];
+        if (empty($country) && $aff->getElementsByTagName('country')->count()) {
+            $country = @$aff->getElementsByTagName('country')->item(0)->getAttribute('country');
+        }
+        if ($aff->getElementsByTagName('institution')->count()) {
+            $affiliations[] = @$aff->getElementsByTagName('institution')->item(0)->nodeValue;
         }
     }
+    $affiliation = implode('; ', array_unique(array_filter($affiliations)));
 
     $newAuthor->setEmail($email);
     $newAuthor->setCountry($country);
