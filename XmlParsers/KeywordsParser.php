@@ -17,7 +17,7 @@
             $locale = $keywordsGroup->getAttribute('xml:lang');
     
             $locale = $locale ?? null;
-            $iso3Code = $locale ? PKPLocale::getIso3FromIso1($locale) : null;
+            $iso3Code = $locale ? PKPLocale::getIso3FromIso1(substr($locale, 0, 2)) : null;
             $locale = $iso3Code ? PKPLocale::getLocaleFromIso3($iso3Code) : null;
     
             $keywords = [];

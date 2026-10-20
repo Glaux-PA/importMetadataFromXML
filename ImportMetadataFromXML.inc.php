@@ -170,7 +170,7 @@ class ImportMetadataFromXML extends GenericPlugin
 			$xmlLang = $rootElement->getAttribute('xml:lang');
 
 			if (!empty($xmlLang)) {
-				$iso3Code = PKPLocale::getIso3FromIso1($xmlLang);
+				$iso3Code = PKPLocale::getIso3FromIso1(substr($xmlLang, 0, 2));
 				$language = PKPLocale::getLocaleFromIso3($iso3Code);
 				$primaryLanguage = $language;
 			}else{
@@ -184,7 +184,7 @@ class ImportMetadataFromXML extends GenericPlugin
 			$xmlLanguages = [];
 			foreach ($nodesWithLang as $node) {
 				$lang = $node->getAttribute('xml:lang');
-				$iso3Code = PKPLocale::getIso3FromIso1($lang);
+				$iso3Code = PKPLocale::getIso3FromIso1(substr($lang, 0, 2));
 				$language = PKPLocale::getLocaleFromIso3($iso3Code);
 				if ($language && !in_array($language, $xmlLanguages)) {
 					$xmlLanguages[] = $language;
@@ -218,7 +218,7 @@ class ImportMetadataFromXML extends GenericPlugin
 				foreach ($transTitleGroup->getElementsByTagName('trans-title') as $transTitle) {
 					$lang = $transTitle->getAttribute('xml:lang');
 					if (!empty($lang)) {
-						$iso3Code = PKPLocale::getIso3FromIso1($lang);
+						$iso3Code = PKPLocale::getIso3FromIso1(substr($lang, 0, 2));
 						$language = PKPLocale::getLocaleFromIso3($iso3Code);
 						$title = $transTitle->nodeValue;
 						$publication->setData('title', $title, $language);
@@ -227,7 +227,7 @@ class ImportMetadataFromXML extends GenericPlugin
 				foreach ($transTitleGroup->getElementsByTagName('trans-subtitle') as $transSubtitle) {
 					$lang = $transTitle->getAttribute('xml:lang');
 					if (!empty($lang)) {
-						$iso3Code = PKPLocale::getIso3FromIso1($lang);
+						$iso3Code = PKPLocale::getIso3FromIso1(substr($lang, 0, 2));
 						$language = PKPLocale::getLocaleFromIso3($iso3Code);
 						$subtitle = $transSubtitle->nodeValue;
 						$publication->setData('subtitle', $subtitle, $language);

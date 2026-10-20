@@ -38,7 +38,7 @@ function transAbstractParse($transAbstracts, $publication){
                 }
             }
             if (!empty($locale) && !empty($transAbstractContent)) {
-                $iso3Code = PKPLocale::getIso3FromIso1($locale);
+                $iso3Code = PKPLocale::getIso3FromIso1(substr($locale, 0, 2));
                 $language = PKPLocale::getLocaleFromIso3($iso3Code);
                 $publication->setData('abstract', $transAbstractContent, $language);
             }
