@@ -101,7 +101,10 @@ class ImportMetadataFromXML extends GenericPlugin
 
 					buttonImport.addEventListener("click", () => {
 						if (confirm("' . __('plugins.generic.importMetadata.confirmImport') . '")) {
-							fetch("' . $fileImport . '?submissionId="+document.querySelector(".pkpWorkflow__identificationId").innerText)
+							fetch("' . $fileImport . '", {
+								method: "POST",
+								body: new URLSearchParams({submissionId: document.querySelector(".pkpWorkflow__identificationId").innerText, csrfToken: "' . $request->getSession()->getCSRFToken() . '"})
+							})
 								.then(response => response.json())
 								.then(data => {
 									if(!alert(data)){window.location.reload();}
@@ -139,7 +142,13 @@ class ImportMetadataFromXML extends GenericPlugin
 		if ($page == 'importMetadataFromXML') {
 			$submissionDao = DAORegistry::getDAO('SubmissionDAO');
 			$publicationDao = DAORegistry::getDAO('PublicationDAO');
-			$submission = $submissionDao->getById($_GET['submissionId']);
+			$user = $request->getUser();
+			$submission = $submissionDao->getById((int) $request->getUserVar('submissionId'));
+			if (!$request->isPost() || !$request->checkCSRF() || !$user || !$user->hasRole([ROLE_ID_MANAGER], $contextId) || !$submission || $submission->getData('contextId') != $contextId) {
+				AppLocale::requireComponents(LOCALE_COMPONENT_PKP_USER);
+				echo json_encode(__('user.authorization.accessDenied'));
+				die;
+			}
 			$publication = $submission->getCurrentPublication();
 
 			$submissionGalleyDao = DAORegistry::getDAO('SubmissionFileDAO');
