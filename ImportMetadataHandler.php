@@ -309,6 +309,7 @@ class ImportMetadataHandler extends Handler
 		$keywordsGroups = $articleMeta->getElementsByTagName('kwd-group');
 
 		$localeKeywords = keywordsParse($keywordsGroups, $allLanguages, $primaryLanguage);
+		$localeKeywords = array_merge(Repo::controlledVocab()->getBySymbolic(ControlledVocab::CONTROLLED_VOCAB_SUBMISSION_KEYWORD, Application::ASSOC_TYPE_PUBLICATION, $publication->getId()), $localeKeywords);
 
 		Repo::controlledVocab()->insertBySymbolic(
 			ControlledVocab::CONTROLLED_VOCAB_SUBMISSION_KEYWORD,
