@@ -1,8 +1,12 @@
-Import metadata from XML
+# Import metadata from XML
 
-Version for OJS 3.3.X
+This plugin loads the publication metadata from a JATS XML galley.
 
-This plugin load publication metadata from a XML galley.
+| OJS | Branch | Release |
+|---|---|---|
+| 3.5 | `main`, `stable-3_5_0` | 1.2.0.0 |
+| 3.4 | `stable-3_4_0` | 1.1.0.0 |
+| 3.3 | `stable-3_3_0` | 1.0.0.0 |
 
 
 ## Instructions
@@ -11,15 +15,16 @@ This plugin load publication metadata from a XML galley.
 You can install this plugin in two ways:
 
 #### 1. Upload via the OJS Web Interface
-- Go to the **Dashboard** > **Website Settings** > **Plugins**.
+- Download the `.tar.gz` file for your OJS version from the [Releases](https://github.com/Glaux-PA/importMetadataFromXML/releases) page.
+- Go to **Settings** > **Website** > **Plugins**.
 - Click on **Upload a New Plugin**.
-- Select the plugin `.tar.gz` or `.zip` archive and upload it.
+- Select the `.tar.gz` file and upload it.
 - Once installed, make sure to **enable** the plugin.
 
 #### 2. Manual Installation
 - Upload or extract the plugin folder into the appropriate directory:
   - ojs/plugins/generic
-- Activate plugin from plugin from "Website -> Plugins"
+- Enable the plugin in **Settings** > **Website** > **Plugins**.
 
 ### Plugin Usage
 * In the submission desired, add galley
@@ -28,26 +33,48 @@ You can install this plugin in two ways:
     - ![Xml galley](doc/img/submission_galley_add_xml.png)
 * Apply "Import metadata"
     - ![Import metadata](doc/img/submission_import_metadata_button.png)
-* Review metadata added, title, description, colaborators, references, etc...
-
-
+* Review metadata added, title, description, contributors, references, etc...
 
 
 ## Improvements and Revisions
-* Doesn't retrieve emails of authors/collaborators → Improvement
-* Keywords, insert in all languages → Improvement
-* JEL Code → A field specifically inserted for certain journals → Improvement
-** Retrieve it as a keyword → Improvement
-** Insert it in all languages
-* Support/Funding Agencies → Improvement
-** Only in one language → Should appear in all available languages → Improvement
-* Abstract: Review if text formatting (bold, etc.) is correct → Improvement
-** Style, bold, italics are important, both in the title and body text
-** Occasionally, there may be links to references, but in that case, the link should not be included
-* Collaborators → Improvement
-* References: Inserted in a format that seems incorrect → Improvement
-** A function has been added to remove unwanted spaces in the text
-* Add security so that the button does not appear based on the user's role → Improvement
-* Titles and subtitles: Manage secondary languages (trans-titles) or keep the default behavior → Improvement
-* DOI: Not being registered
-* Code Refactor and Translations
+- [x] **Does not fetch author/contributor emails -> Feature**
+  - Replaces it with the main contact -> sometimes
+  - Depends on the XML file
+    - The reported XML format is different from previously used ones
+      - Consider the new format to save contributor emails -> **Feature** -> ✔️
+- [x] **Keywords are not inserted in any language -> Feature**
+  - Requires proper language configuration in the journal settings
+  - Issues with multiple languages and the language set in the XML
+  - Conflict with XMLs that include JEL codes -> **Feature** -> ✔️
+  - Keywords in other languages are kept -> ✔️
+- [x] **JEL Code -> A field specifically inserted for certain journals -> Feature**
+  - Use it as keywords -> **Feature** -> ✔️
+  - Insert it into the languages of the XML -> ✔️
+- [x] **Funding agencies -> Feature**
+  - Only in one language -> Show the same in all the languages of the XML -> **Feature** -> ✔️
+  - Does not capture the entire text
+    - Extract the `funding-statement` tag -> **Feature** -> ✔️
+- [x] **Abstract: Check if the text is formatted correctly (bold, etc.) -> Feature**
+  - Currently discards title tags (summary) and includes only the content -> ✔️
+  - Titles (if specified) should be included, except generic ones (summary) -> ✔️
+  - Style (bold, italic) is important in both title and body -> ✔️
+  - Links to references may occasionally appear, but they should not be incorporated -> ✔️
+- [x] **Contributors: Inserts collaborators only in Spanish -> Feature**
+  - Verify if the Role is fetched correctly -> ✔️
+  - Affiliation: Verify -> ✔️
+- [x] **References: Inserted in a seemingly incorrect format -> Feature**
+  - A function is added to clean unwanted spaces in the text
+- [x] **Add security to hide the button based on user role -> Feature**
+  - Only allow Managers (and assigned Editors in OJS 3.5)
+  - The role is also checked on the server -> ✔️
+- [x] **Titles and subtitles: Manage secondary languages (trans-titles) or use defaults as is -> Feature**
+- [x] **DOI: Now in a separate section and not being registered -> ✔️**
+  - It is generating an incorrect DOI; it should fetch it from the XML.
+  - The https://doi.org/ prefix is removed -> ✔️
+- [x] **Refactor**
+- [x] **Languages: Review language handling**
+  - Use only the languages of the XML. The other languages are kept -> ✔️
+  - xml:lang with region like es-ES is accepted -> ✔️
+- [x] **Affiliations: Import affiliations outside the contrib element -> ✔️**
+  - All affiliations of the author are imported -> ✔️
+- [x] **Author group: Do not depend on the "AU" abbreviation in English -> ✔️**
