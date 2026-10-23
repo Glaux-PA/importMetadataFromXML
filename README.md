@@ -50,6 +50,7 @@ You can install this plugin in two ways:
 - [x] **JEL Code -> A field specifically inserted for certain journals -> Feature**
   - Use it as keywords -> **Feature** -> ✔️
   - Insert it into the languages of the XML -> ✔️
+  - JEL codes are imported even if the JEL group is not the last one -> ✔️
 - [x] **Funding agencies -> Feature**
   - Only in one language -> Show the same in all the languages of the XML -> **Feature** -> ✔️
   - Does not capture the entire text
@@ -62,6 +63,9 @@ You can install this plugin in two ways:
 - [x] **Contributors: Inserts collaborators only in Spanish -> Feature**
   - Verify if the Role is fetched correctly -> ✔️
   - Affiliation: Verify -> ✔️
+  - Author names keep their capitalization -> ✔️
+  - Import works when no author has corresp="yes" -> ✔️
+  - Authors are kept when the XML has no contrib-group -> ✔️
 - [x] **References: Inserted in a seemingly incorrect format -> Feature**
   - A function is added to clean unwanted spaces in the text
 - [x] **Add security to hide the button based on user role -> Feature**
@@ -78,3 +82,6 @@ You can install this plugin in two ways:
 - [x] **Affiliations: Import affiliations outside the contrib element -> ✔️**
   - All affiliations of the author are imported -> ✔️
 - [x] **Author group: Do not depend on the "AU" abbreviation in English -> ✔️**
+  - Authors keep their user group after a new import -> ✔️
+- [x] **Translations: Plugin name and description are translated -> ✔️**
+  - Catalan and Portuguese translations -> ✔️
