@@ -4,9 +4,9 @@ This plugin loads the publication metadata from a JATS XML galley.
 
 | OJS | Branch | Release |
 |---|---|---|
-| 3.5 | `main`, `stable-3_5_0` | 1.2.0.0 |
-| 3.4 | `stable-3_4_0` | 1.1.0.0 |
-| 3.3 | `stable-3_3_0` | 1.0.0.0 |
+| 3.5 | `main`, `stable-3_5_0` | 1.2.0.1 |
+| 3.4 | `stable-3_4_0` | 1.1.0.1 |
+| 3.3 | `stable-3_3_0` | 1.0.0.1 |
 
 
 ## Instructions
@@ -83,5 +83,8 @@ You can install this plugin in two ways:
   - All affiliations of the author are imported -> ✔️
 - [x] **Author group: Do not depend on the "AU" abbreviation in English -> ✔️**
   - Authors keep their user group after a new import -> ✔️
+- [x] **Fields that are not in the XML are kept -> ✔️**
+  - Author biography, email, ORCID, country, affiliation and URL are kept when the XML does not have them -> ✔️
+  - Subtitle, pages, date, license, references and funding are kept when the XML does not have them -> ✔️
 - [x] **Translations: Plugin name and description are translated -> ✔️**
   - Catalan and Portuguese translations -> ✔️
