@@ -292,9 +292,9 @@ class ImportMetadataFromXML extends GenericPlugin
 			if ($contribGroup) {
 				$authors = $publication->getData('authors');
 
-				$existingUserGroupId = null;
+				$oldAuthors = [];
 				foreach ($authors as $author) {
-					$existingUserGroupId = $existingUserGroupId ?: $author->getData('userGroupId');
+					$oldAuthors[] = $author;
 					Repo::author()->delete($author);
 				}
 
@@ -316,7 +316,7 @@ class ImportMetadataFromXML extends GenericPlugin
 						$userGroupId = $authorUserGroup->getId();
 					}
 				}
-				$userGroupId = $existingUserGroupId ?: ($userGroupId ?: $firstUserGroupId);
+				$userGroupId = $userGroupId ?: $firstUserGroupId;
 				$authorNotes = @$articleMeta->getElementsByTagName('author-notes')->item(0);
 
 				$affById = [];
@@ -329,6 +329,10 @@ class ImportMetadataFromXML extends GenericPlugin
 
 				foreach ($contribGroup->getElementsByTagName('contrib') as $contrib) {
 					$newAuthor = authorParse($contrib, $allLanguages, $publication, $request, $userGroupId, $cont, $authorNotes, $affById);
+					$oldAuthor = findOldAuthor($newAuthor, $oldAuthors);
+					if ($oldAuthor) {
+						keepAuthorData($newAuthor, $oldAuthor, $context->getData('contactEmail'));
+					}
 
 					$authorId = Repo::author()->add($newAuthor);
 
@@ -361,19 +365,23 @@ class ImportMetadataFromXML extends GenericPlugin
 					$page .= '-' . $endPage;
 				}
 			}
-			$publication->setData('pages', $page);
+			if (!empty($page)) {
+				$publication->setData('pages', $page);
+			}
 
 			$pubDate = $articleMeta->getElementsByTagName('pub-date')->item(0);
-			$dayPublished = '01';
-			if ($pubDate->getElementsByTagName('day')->count()) {
-				$dayPublished = $pubDate->getElementsByTagName('day')->item(0)->nodeValue;
+			if ($pubDate && $pubDate->getElementsByTagName('year')->count()) {
+				$dayPublished = '01';
+				if ($pubDate->getElementsByTagName('day')->count()) {
+					$dayPublished = $pubDate->getElementsByTagName('day')->item(0)->nodeValue;
+				}
+				$monthPublished = @$pubDate->getElementsByTagName('month')->item(0)->nodeValue ?: '01';
+				$yearPublished = $pubDate->getElementsByTagName('year')->item(0)->nodeValue;
+				$publication->setData('datePublished', $yearPublished . '-' . $monthPublished . '-' . $dayPublished);
 			}
-			$monthPublished = @$pubDate->getElementsByTagName('month')->item(0)->nodeValue;
-			$yearPublished = @$pubDate->getElementsByTagName('year')->item(0)->nodeValue;
-			$publication->setData('datePublished', $yearPublished . '-' . $monthPublished . '-' . $dayPublished);
 
-			$licenses = $articleMeta->getElementsByTagName('permissions')->item(0)->getElementsByTagName('license');
-			foreach ($licenses as $li) {
+			$permissions = $articleMeta->getElementsByTagName('permissions')->item(0);
+			foreach ($permissions ? $permissions->getElementsByTagName('license') : [] as $li) {
 				if ($li->getAttribute('license-type') === 'open-access') {
 					$publication->setData('licenseUrl', $li->getAttribute('xlink:href'));
 				}
@@ -390,7 +398,9 @@ class ImportMetadataFromXML extends GenericPlugin
 					$citationContent = normalizeSpaces(getNodeText($citation));
 					$citations[] = $citationContent;
 				}
-				$publication->setData('citationsRaw', implode("\n", $citations));
+				if ($citations) {
+					$publication->setData('citationsRaw', implode("\n", $citations));
+				}
 			}
 
 
@@ -420,6 +430,7 @@ class ImportMetadataFromXML extends GenericPlugin
 			$localeFoundings = fundingParse($fundingGroups, $allLanguages);
 
 			$submissionAgencyDao = DAORegistry::getDAO('SubmissionAgencyDAO');
+			$localeFoundings = array_merge($submissionAgencyDao->getAgencies($publication->getId()), $localeFoundings);
 			$submissionAgencyDao->insertAgencies($localeFoundings, $publication->getId());
 
 
