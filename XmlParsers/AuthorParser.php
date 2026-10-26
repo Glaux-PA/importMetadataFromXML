@@ -141,4 +141,57 @@ function authorParse($contrib, $allLanguages,$publication, $request, $userGroupI
     return $newAuthor;
 
 }
+
+function authorKey($author) {
+    $givenNames = array_filter((array) $author->getData('givenName'));
+    $familyNames = array_filter((array) $author->getData('familyName'));
+    $name = reset($givenNames) . ' ' . reset($familyNames);
+    if (class_exists('Normalizer')) {
+        $name = preg_replace('/\p{Mn}/u', '', Normalizer::normalize($name, Normalizer::FORM_D));
+    }
+    return trim(preg_replace('/\s+/', ' ', mb_strtolower($name)));
+}
+
+function findOldAuthor($newAuthor, &$oldAuthors) {
+    $key = authorKey($newAuthor);
+    foreach ($oldAuthors as $i => $oldAuthor) {
+        if ($key !== '' && authorKey($oldAuthor) === $key) {
+            unset($oldAuthors[$i]);
+            return $oldAuthor;
+        }
+    }
+    return null;
+}
+
+function keepAuthorData($newAuthor, $oldAuthor, $contactEmail) {
+    foreach ($oldAuthor->getAllData() as $key => $value) {
+        if (in_array($key, ['id', 'publicationId', 'seq', 'primaryContact', 'affiliations'])) {
+            continue;
+        }
+        $newValue = $newAuthor->getData($key);
+        if ($key === 'email' && $newValue === $contactEmail) {
+            $newValue = null;
+        }
+        if ($key === 'userGroupId') {
+            $newAuthor->setData($key, $value ?: $newValue);
+        } elseif (is_array($value)) {
+            $newAuthor->setData($key, array_merge($value, array_filter((array) $newValue, function ($v) {
+                return $v !== null && $v !== '';
+            })));
+        } elseif ($newValue === null || $newValue === '') {
+            $newAuthor->setData($key, $value);
+        }
+    }
+    if (!$newAuthor->getAffiliations() && $oldAuthor->getAffiliations()) {
+        $affiliations = [];
+        foreach ($oldAuthor->getAffiliations() as $oldAffiliation) {
+            $affiliation = Repo::affiliation()->newDataObject();
+            $affiliation->setAllData($oldAffiliation->getAllData());
+            $affiliation->setData('id', null);
+            $affiliation->setData('authorId', null);
+            $affiliations[] = $affiliation;
+        }
+        $newAuthor->setAffiliations($affiliations);
+    }
+}
 ?>

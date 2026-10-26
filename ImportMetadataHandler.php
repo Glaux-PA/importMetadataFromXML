@@ -192,9 +192,9 @@ class ImportMetadataHandler extends Handler
 		if ($contribGroup) {
 			$authors = $publication->getData('authors');
 
-			$existingUserGroupId = null;
+			$oldAuthors = [];
 			foreach ($authors ?? [] as $author) {
-				$existingUserGroupId = $existingUserGroupId ?: $author->getData('userGroupId');
+				$oldAuthors[] = $author;
 				Repo::author()->delete($author);
 			}
 
@@ -214,7 +214,7 @@ class ImportMetadataHandler extends Handler
 					$userGroupId = $authorUserGroup->id;
 				}
 			}
-			$userGroupId = $existingUserGroupId ?: ($userGroupId ?: $firstUserGroupId);
+			$userGroupId = $userGroupId ?: $firstUserGroupId;
 			$authorNotes = $articleMeta->getElementsByTagName('author-notes')->item(0);
 
 			$affById = [];
@@ -227,6 +227,10 @@ class ImportMetadataHandler extends Handler
 
 			foreach ($contribGroup->getElementsByTagName('contrib') as $contrib) {
 				$newAuthor = authorParse($contrib, $allLanguages, $publication, $request, $userGroupId, $cont, $authorNotes, $affById);
+				$oldAuthor = findOldAuthor($newAuthor, $oldAuthors);
+				if ($oldAuthor) {
+					keepAuthorData($newAuthor, $oldAuthor, $context->getData('contactEmail'));
+				}
 
 				$authorId = Repo::author()->add($newAuthor);
 
@@ -298,7 +302,9 @@ class ImportMetadataHandler extends Handler
 				$citationContent = normalizeSpaces(getNodeText($citation));
 				$citations[] = $citationContent;
 			}
-			$editParams['citationsRaw'] = implode("\n", $citations);
+			if ($citations) {
+				$editParams['citationsRaw'] = implode("\n", $citations);
+			}
 		}
 
 		Repo::publication()->edit($publication, $editParams);
@@ -324,6 +330,7 @@ class ImportMetadataHandler extends Handler
 		$fundingGroups = $front->getElementsByTagName('funding-group');
 
 		$localeFoundings = fundingParse($fundingGroups, $allLanguages);
+		$localeFoundings = array_merge(Repo::controlledVocab()->getBySymbolic(ControlledVocab::CONTROLLED_VOCAB_SUBMISSION_AGENCY, Application::ASSOC_TYPE_PUBLICATION, $publication->getId()), $localeFoundings);
 
 		Repo::controlledVocab()->insertBySymbolic(
 			ControlledVocab::CONTROLLED_VOCAB_SUBMISSION_AGENCY,
